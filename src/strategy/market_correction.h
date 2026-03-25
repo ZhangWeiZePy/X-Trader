@@ -10,12 +10,12 @@ class market_correction : public strategy, public bar_receiver
 {
 	enum class eStatus
 	{
-		Peak,///²¨·å
-		Trough,///²¨¹È
-		Rise,///ÕÇ
-		Decline,///µø
-		Oscillation,///Õğµ´
-		Unknown,///Î´Öª
+		Peak,///æ³¢å³°
+		Trough,///æ³¢è°·
+		Rise,///æ¶¨
+		Decline,///è·Œ
+		Oscillation,///éœ‡è¡
+		Unknown,///æœªçŸ¥
 	};
 
 public:

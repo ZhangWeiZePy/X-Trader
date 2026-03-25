@@ -29,8 +29,8 @@ public:
 private:
 	std::string _contract;
 	uint32_t _period;
-	uint32_t _multiples;//±¶Êı
-	uint32_t _threshold;//ãĞÖµ
+	uint32_t _multiples;//å€æ•°
+	uint32_t _threshold;//é˜ˆå€¼
 	uint32_t _position_limit;
 	uint32_t _once_vol;
 	orderref_t _buy_orderref;

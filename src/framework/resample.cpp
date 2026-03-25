@@ -49,12 +49,12 @@ void resample::insert_tick(const MarketData& tick)
 
 	if (_poc[tick.last_price] > _poc[_bar.poc]) { _bar.poc = tick.last_price; }
 
-	if (tick.last_price == tick.bid_price[0])//主动卖出
+	if (tick.last_price == tick.bid_price[0])//涓诲姩鍗栧嚭
 	{
 		_bar.active_sell_volume[tick.last_price] += tick.last_volume;
 		_bar.delta -= tick.last_volume;
 	}
-	if (tick.last_price == tick.ask_price[0])//主动买入
+	if (tick.last_price == tick.ask_price[0])//涓诲姩涔板叆
 	{
 		_bar.active_buy_volume[tick.last_price] += tick.last_volume;
 		_bar.delta += tick.last_volume;

@@ -165,7 +165,7 @@ void realtime::handle_order(const Order& order)
 	
 	if (o.volume_total != order.volume_total)
 	{
-		//¸üĞÂ³Ö²Ö
+		//æ›´æ–°æŒä»“
 		const int& volume_total = order.volume_total;
 		Position& p = _position_map[order.instrument_id];
 		p.id = order.instrument_id;
@@ -219,7 +219,7 @@ void realtime::handle_order(const Order& order)
 		print_position(p, "handle_order");
 	}
 
-	//¸üĞÂ±¨µ¥
+	//æ›´æ–°æŠ¥å•
 	memcpy(&o, &order, sizeof(struct Order));
 	
 	if (_order_event.on_order) { _order_event.on_order(order); }
@@ -229,12 +229,12 @@ void realtime::handle_order(const Order& order)
 
 void realtime::handle_trade(const Order& order)
 {
-	//¸üĞÂ±¨µ¥
+	//æ›´æ–°æŠ¥å•
 	Order& o = _order_map[order.order_ref];
 	const int& vol_traded_once = order.volume_traded - o.volume_traded;
 	memcpy(&o, &order, sizeof(struct Order));
 	
-	//¸üĞÂ³Ö²Ö
+	//æ›´æ–°æŒä»“
 	if (vol_traded_once > 0)
 	{
 		Position& p = _position_map[order.instrument_id];
@@ -314,7 +314,7 @@ void realtime::handle_trade(const Order& order)
 		print_position(p, "handle_trade");
 	}
 	
-	//É¾³ı±¨µ¥¼°³Ö²Ö
+	//åˆ é™¤æŠ¥å•åŠæŒä»“
 	if (order.order_status == eOrderStatus::AllTraded)
 	{
 		auto it_o = _order_map.find(order.order_ref);
@@ -343,7 +343,7 @@ void realtime::handle_trade(const Order& order)
 
 void realtime::handle_cancel(const Order& order)
 {
-	//¸üĞÂ³Ö²Ö
+	//æ›´æ–°æŒä»“
 	Position& p = _position_map[order.instrument_id];
 	const int& volume_total = order.volume_total;
 
@@ -394,7 +394,7 @@ void realtime::handle_cancel(const Order& order)
 		}
 	}
 
-	//É¾³ı±¨µ¥
+	//åˆ é™¤æŠ¥å•
 	auto iter = _order_map.find(order.order_ref);
 	if (iter != _order_map.end()) { _order_map.erase(iter); }
 	
