@@ -1,0 +1,13 @@
+.idea/
+.vscode/
+.gradle/
+src/build/
+bin/*.dll
+bin/*.exe
+bin/*.pdb
+bin/*.mdb
+bin/*.config
+bin/*.xml
+bin/*.json
+bin/*.txt
+bin/*.so
