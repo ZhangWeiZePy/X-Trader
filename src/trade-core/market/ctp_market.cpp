@@ -211,15 +211,15 @@ void ctp_market::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField* ptr)
 
 	it->second = *ptr;
 
-	//printf("LastPrice : %.2f\n", ptr->LastPrice);
-	//printf("AskPrice1 : %.2f	AskVolume1 : %d\t", ptr->AskPrice1, ptr->AskVolume1);
-	//printf("BidPrice1 : %.2f	BidVolume1 : %d\n", ptr->BidPrice1, ptr->BidVolume1);
-	//printf("AskPrice2 : %.2f	AskVolume2 : %d\t", ptr->AskPrice2, ptr->AskVolume2);
-	//printf("BidPrice2 : %.2f	BidVolume2 : %d\n", ptr->BidPrice2, ptr->BidVolume2);
-	//printf("AskPrice3 : %.2f	AskVolume3 : %d\t", ptr->AskPrice3, ptr->AskVolume3);
-	//printf("BidPrice3 : %.2f	BidVolume3 : %d\n", ptr->BidPrice3, ptr->BidVolume3);
-	//printf("AskPrice4 : %.2f	AskVolume4 : %d\t", ptr->AskPrice4, ptr->AskVolume4);
-	//printf("BidPrice4 : %.2f	BidVolume4 : %d\n", ptr->BidPrice4, ptr->BidVolume4);
-	//printf("AskPrice5 : %.2f	AskVolume5 : %d\t", ptr->AskPrice5, ptr->AskVolume5);
-	//printf("BidPrice5 : %.2f	BidVolume5 : %d\n\n", ptr->BidPrice5, ptr->BidVolume5);
+	printf("LastPrice : %.2f\n", ptr->LastPrice);
+	printf("AskPrice1 : %.2f	AskVolume1 : %d\t", ptr->AskPrice1, ptr->AskVolume1);
+	printf("BidPrice1 : %.2f	BidVolume1 : %d\n", ptr->BidPrice1, ptr->BidVolume1);
+	printf("AskPrice2 : %.2f	AskVolume2 : %d\t", ptr->AskPrice2, ptr->AskVolume2);
+	printf("BidPrice2 : %.2f	BidVolume2 : %d\n", ptr->BidPrice2, ptr->BidVolume2);
+	printf("AskPrice3 : %.2f	AskVolume3 : %d\t", ptr->AskPrice3, ptr->AskVolume3);
+	printf("BidPrice3 : %.2f	BidVolume3 : %d\n", ptr->BidPrice3, ptr->BidVolume3);
+	printf("AskPrice4 : %.2f	AskVolume4 : %d\t", ptr->AskPrice4, ptr->AskVolume4);
+	printf("BidPrice4 : %.2f	BidVolume4 : %d\n", ptr->BidPrice4, ptr->BidVolume4);
+	printf("AskPrice5 : %.2f	AskVolume5 : %d\t", ptr->AskPrice5, ptr->AskVolume5);
+	printf("BidPrice5 : %.2f	BidVolume5 : %d\n\n", ptr->BidPrice5, ptr->BidVolume5);
 }

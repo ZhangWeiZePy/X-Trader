@@ -1,9 +1,11 @@
 if(WIN32)
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH}
-    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/win64/")
+    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/win64/"
+    "${PROJECT_SOURCE_DIR}/../api/xtp/v6.6.9/win64/")
 else()
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH}
-    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/linux64/")
+    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/linux64/"
+    "${PROJECT_SOURCE_DIR}/../api/xtp/v6.6.9/linux64/")
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
