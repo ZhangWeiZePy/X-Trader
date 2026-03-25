@@ -81,7 +81,10 @@ bool realtime::init(const std::string& filename, const std::set<std::string>& co
 	td_config["password"] = reader.Get("trader", "password", "");
 	td_config["app_id"] = reader.Get("trader", "app_id", "");
 	td_config["auth_code"] = reader.Get("trader", "auth_code", "");
+	td_config["software_key"] = reader.Get("trader", "software_key", "");
 	td_config["user_product_Info"] = reader.Get("trader", "user_product_Info", "");
+	td_config["client_id"] = reader.Get("trader", "client_id", "");
+	td_config["sock_type"] = reader.Get("trader", "sock_type", "");
 	td_config["counter"] = reader.Get("trader", "counter", "");
 	_trader = create_trader(td_config, contracts);
 	if (_trader == nullptr) { return false; }
@@ -167,7 +170,7 @@ void realtime::handle_order(const Order& order)
 	
 	if (o.volume_total != order.volume_total)
 	{
-		//æ›´æ–°æŒä»“
+		//¸üĞÂ³Ö²Ö
 		const int& volume_total = order.volume_total;
 		Position& p = _position_map[order.instrument_id];
 		p.id = order.instrument_id;
@@ -221,7 +224,7 @@ void realtime::handle_order(const Order& order)
 		print_position(p, "handle_order");
 	}
 
-	//æ›´æ–°æŠ¥å•
+	//¸üĞÂ±¨µ¥
 	memcpy(&o, &order, sizeof(struct Order));
 	
 	if (_order_event.on_order) { _order_event.on_order(order); }
@@ -231,12 +234,12 @@ void realtime::handle_order(const Order& order)
 
 void realtime::handle_trade(const Order& order)
 {
-	//æ›´æ–°æŠ¥å•
+	//¸üĞÂ±¨µ¥
 	Order& o = _order_map[order.order_ref];
 	const int& vol_traded_once = order.volume_traded - o.volume_traded;
 	memcpy(&o, &order, sizeof(struct Order));
 	
-	//æ›´æ–°æŒä»“
+	//¸üĞÂ³Ö²Ö
 	if (vol_traded_once > 0)
 	{
 		Position& p = _position_map[order.instrument_id];
@@ -316,7 +319,7 @@ void realtime::handle_trade(const Order& order)
 		print_position(p, "handle_trade");
 	}
 	
-	//åˆ é™¤æŠ¥å•åŠæŒä»“
+	//É¾³ı±¨µ¥¼°³Ö²Ö
 	if (order.order_status == eOrderStatus::AllTraded)
 	{
 		auto it_o = _order_map.find(order.order_ref);
@@ -345,7 +348,7 @@ void realtime::handle_trade(const Order& order)
 
 void realtime::handle_cancel(const Order& order)
 {
-	//æ›´æ–°æŒä»“
+	//¸üĞÂ³Ö²Ö
 	Position& p = _position_map[order.instrument_id];
 	const int& volume_total = order.volume_total;
 
@@ -396,7 +399,7 @@ void realtime::handle_cancel(const Order& order)
 		}
 	}
 
-	//åˆ é™¤æŠ¥å•
+	//É¾³ı±¨µ¥
 	auto iter = _order_map.find(order.order_ref);
 	if (iter != _order_map.end()) { _order_map.erase(iter); }
 	

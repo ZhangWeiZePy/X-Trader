@@ -90,8 +90,15 @@ xtp_trader::xtp_trader(std::map<std::string, std::string>& config, std::set<std:
 	_td_api->SetHeartBeatInterval(15);
 	// In XTP, you should specify the software version
 	_td_api->SetSoftwareVersion("1.0.0");
+	std::string software_key;
 	if (config.count("software_key")) {
-		_td_api->SetSoftwareKey(config["software_key"].c_str());
+		software_key = config["software_key"];
+	}
+	if (software_key.empty() && config.count("auth_code")) {
+		software_key = config["auth_code"];
+	}
+	if (!software_key.empty()) {
+		_td_api->SetSoftwareKey(software_key.c_str());
 	}
 
 	_session_id = _td_api->Login(_server_ip.c_str(), _server_port, _user_id.c_str(), _password.c_str(), _protocol_type);
@@ -169,17 +176,22 @@ orderref_t xtp_trader::insert_order(eOrderFlag order_flag, const std::string& co
 		t.price_type = XTP_PRICE_LIMIT;
 		break;
 	case eOrderFlag::Market:
-		t.price_type = XTP_PRICE_BEST5_OR_CANCEL; // Or suitable market type
+		if (t.market == XTP_MKT_SH_A) {
+			t.price_type = XTP_PRICE_BEST5_OR_LIMIT;
+		}
+		else {
+			t.price_type = XTP_PRICE_BEST_OR_CANCEL;
+		}
 		break;
 	case eOrderFlag::FOK:
-		t.price_type = XTP_PRICE_ALL_OR_CANCEL; // Approximate FOK
+		t.price_type = XTP_PRICE_ALL_OR_CANCEL;
 		break;
 	case eOrderFlag::FAK:
-		t.price_type = XTP_PRICE_BEST5_OR_CANCEL; // Approximate FAK
+		t.price_type = XTP_PRICE_BEST5_OR_CANCEL;
 		break;
 	}
 
-	t.business_type = XTP_BUSINESS_TYPE_CASH; // Cash business
+	t.business_type = XTP_BUSINESS_TYPE_CASH;
 
 	uint64_t xtp_id = _td_api->InsertOrder(&t, _session_id);
 	if (xtp_id == 0) {

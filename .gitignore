@@ -11,3 +11,7 @@ bin/*.xml
 bin/*.json
 bin/*.txt
 bin/*.so
+/bin/libframework.a
+/bin/libtrade-core.a
+/bin/lib/
+/bin/

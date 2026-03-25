@@ -4,6 +4,9 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <atomic>
+
+static std::atomic<double> g_latest_ask_price{0.0};
 
 int main()
 {
@@ -18,6 +21,10 @@ int main()
 	}
 
 	rt.bind_tick_event([](const MarketData& tick) {
+		double ask1 = tick.ask_price[0] > 0 ? tick.ask_price[0] : tick.last_price;
+		if (ask1 > 0) {
+			g_latest_ask_price.store(ask1, std::memory_order_release);
+		}
 		std::cout << "[Tick] Instrument: " << tick.instrument_id
 				  << " LastPrice: " << tick.last_price
 				  << " Volume: " << tick.volume
@@ -47,36 +54,45 @@ int main()
 
 	std::this_thread::sleep_for(std::chrono::seconds(5));
 
-	// a. æŸ¥è¯¢æŒä»“
+	// a. ²éÑ¯³Ö²Ö
 	std::cout << "\n--- a. Query Position ---" << std::endl;
 	const Position& p = rt.get_position("600850");
 	rt.print_position(p, "Initial");
 
-	// b. çŽ°ä»·è´­ä¹°1æ‰‹600850
+	// b. ÏÖ¼Û¹ºÂò1ÊÖ600850
 	std::cout << "\n--- b. Buy 1 lot 600850 at market price ---" << std::endl;
-	// XTP quantity is in shares (1 lot = 100 shares)
-	orderref_t order1 = rt.insert_order(eOrderFlag::Market, "600850", eDirOffset::BuyOpen, 0.0, 100);
+	double market_protect_price = g_latest_ask_price.load(std::memory_order_acquire);
+	if (market_protect_price <= 0.0) {
+		market_protect_price = 23.0;
+	}
+	orderref_t order1 = rt.insert_order(eOrderFlag::Market, "600850", eDirOffset::BuyOpen, market_protect_price, 100);
 	std::cout << "Order 1 Ref: " << order1 << std::endl;
 	std::this_thread::sleep_for(std::chrono::seconds(3));
 
-	// c. 21å…ƒè´­ä¹°1æ‰‹600850
+	// c. 21Ôª¹ºÂò1ÊÖ600850
 	std::cout << "\n--- c. Buy 1 lot 600850 at 21.0 (limit) ---" << std::endl;
 	orderref_t order2 = rt.insert_order(eOrderFlag::Limit, "600850", eDirOffset::BuyOpen, 21.0, 100);
 	std::cout << "Order 2 Ref: " << order2 << std::endl;
 	std::this_thread::sleep_for(std::chrono::seconds(3));
 
-	// d. æŸ¥è¯¢å§”æ‰˜
+	// d. ²éÑ¯Î¯ÍÐ
 	std::cout << "\n--- d. Query Order ---" << std::endl;
 	const Order& o2 = rt.get_order(order2);
 	rt.print_order(o2);
 
-	// e. æ’¤å›žcæ­¥éª¤ä¸‹çš„å•
+	// e. ³·»Øc²½ÖèÏÂµÄµ¥
 	std::cout << "\n--- e. Cancel Order 2 ---" << std::endl;
-	bool cancel_res = rt.cancel_order(order2);
-	std::cout << "Cancel Result: " << cancel_res << std::endl;
+	const Order& order2_state = rt.get_order(order2);
+	if (order2_state.order_status == eOrderStatus::AllTraded || order2_state.order_status == eOrderStatus::Canceled) {
+		std::cout << "Cancel skipped. Current status: " << geteOrderStatusString(order2_state.order_status) << std::endl;
+	}
+	else {
+		bool cancel_res = rt.cancel_order(order2);
+		std::cout << "Cancel Result: " << cancel_res << std::endl;
+	}
 	std::this_thread::sleep_for(std::chrono::seconds(3));
 
-	// f. æŸ¥è¯¢æŒä»“
+	// f. ²éÑ¯³Ö²Ö
 	std::cout << "\n--- f. Query Position ---" << std::endl;
 	const Position& p2 = rt.get_position("600850");
 	rt.print_position(p2, "Final");
