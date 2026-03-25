@@ -2,6 +2,7 @@
 
 #include "trader_api.h"
 #include "ThostFtdcTraderApi.h"
+#include "dyn_lib_loader.h"
 
 #include <iostream>
 #include <chrono>
@@ -208,6 +209,7 @@ private:
 
 private:
 	CThostFtdcTraderApi* _td_api;
+	DynLibLoader _loader;
 	std::atomic<uint32_t> _req_id;
 
 	std::string _broker_id;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dyn_lib_loader.h"
 #include "market_api.h"
 #include "ThostFtdcMdApi.h"
 
@@ -40,6 +41,7 @@ public:
 
 private:
 	CThostFtdcMdApi* _md_api;
+	DynLibLoader _loader;
 	std::string _broker_id;
 	std::string _user_id;
 	std::string _password;

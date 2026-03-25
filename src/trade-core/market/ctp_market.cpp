@@ -4,6 +4,25 @@
 ctp_market::ctp_market(std::map<std::string, std::string>& config, std::set<std::string>& contracts)
 	: _req_id(0), _contracts(contracts)
 {
+	if (config.find("counter") == config.end() || config["counter"].empty()) {
+		throw std::runtime_error("Missing or empty 'counter' in config");
+	}
+	std::string counter = config["counter"];
+#ifdef _WIN32
+	std::string lib_path = "lib/" + counter + "/thostmduserapi_se.dll";
+	const char* creator_name = "?CreateFtdcMdApi@CThostFtdcMdApi@@SAPEAV1@PEBD_N1@Z";
+#else
+	std::string lib_path = "lib/" + counter + "/libthostmduserapi_se.so";
+	const char* creator_name = "_ZN15CThostFtdcMdApi15CreateFtdcMdApiEPKcbb";
+#endif
+	if (!_loader.load(lib_path)) {
+		throw std::runtime_error("Failed to load library: " + lib_path + ", error: " + _loader.get_error());
+	}
+	typedef CThostFtdcMdApi* (*CreateFtdcMdApi_t)(const char *, const bool, const bool);
+	CreateFtdcMdApi_t creator = _loader.get_function<CreateFtdcMdApi_t>(creator_name);
+	if (!creator) {
+		throw std::runtime_error("Failed to find symbol CreateFtdcMdApi in " + lib_path);
+	}
 	_broker_id = config["broker_id"];
 	_user_id = config["user_id"];
 	_password = config["password"];
@@ -14,7 +33,7 @@ ctp_market::ctp_market(std::map<std::string, std::string>& config, std::set<std:
 	{
 		std::filesystem::create_directories(flow_path);
 	}
-	_md_api = CThostFtdcMdApi::CreateFtdcMdApi(flow_path, true, true);
+	_md_api = creator(flow_path, true, true);
 	_md_api->RegisterSpi(this);
 	_md_api->RegisterFront((char*)config["market_front"].c_str());
 	_md_api->Init();

@@ -70,6 +70,7 @@ bool realtime::init(const std::string& filename, const std::set<std::string>& co
 	md_config["broker_id"] = reader.Get("market", "broker_id", "");
 	md_config["user_id"] = reader.Get("market", "user_id", "");
 	md_config["password"] = reader.Get("market", "password", "");
+	md_config["counter"] = reader.Get("market", "counter", "");
 	_market = create_market(md_config, contracts);
 	if (_market == nullptr) { return false; }
 	///trader
@@ -81,6 +82,7 @@ bool realtime::init(const std::string& filename, const std::set<std::string>& co
 	td_config["app_id"] = reader.Get("trader", "app_id", "");
 	td_config["auth_code"] = reader.Get("trader", "auth_code", "");
 	td_config["user_product_Info"] = reader.Get("trader", "user_product_Info", "");
+	td_config["counter"] = reader.Get("trader", "counter", "");
 	_trader = create_trader(td_config, contracts);
 	if (_trader == nullptr) { return false; }
 

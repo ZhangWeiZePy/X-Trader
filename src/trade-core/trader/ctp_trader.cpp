@@ -1,9 +1,28 @@
 #include "ctp_trader.h"
-
+#include <stdexcept>
 
 ctp_trader::ctp_trader(std::map<std::string, std::string>& config, std::set<std::string>& contracts)
 	: _req_id(0), _front_id(0), _session_id(0), _order_ref(0), _contracts(contracts)
 {
+	if (config.find("counter") == config.end() || config["counter"].empty()) {
+		throw std::runtime_error("Missing or empty 'counter' in config");
+	}
+	std::string counter = config["counter"];
+#ifdef _WIN32
+	std::string lib_path = "lib/" + counter + "/thosttraderapi_se.dll";
+	const char* creator_name = "?CreateFtdcTraderApi@CThostFtdcTraderApi@@SAPEAV1@PEBD@Z";
+#else
+	std::string lib_path = "lib/" + counter + "/libthosttraderapi_se.so";
+	const char* creator_name = "_ZN19CThostFtdcTraderApi19CreateFtdcTraderApiEPKc";
+#endif
+	if (!_loader.load(lib_path)) {
+		throw std::runtime_error("Failed to load library: " + lib_path + ", error: " + _loader.get_error());
+	}
+	typedef CThostFtdcTraderApi* (*CreateFtdcTraderApi_t)(const char *);
+	CreateFtdcTraderApi_t creator = _loader.get_function<CreateFtdcTraderApi_t>(creator_name);
+	if (!creator) {
+		throw std::runtime_error("Failed to find symbol CreateFtdcTraderApi in " + lib_path);
+	}
 	_broker_id = config["broker_id"];
 	_user_id = config["user_id"];
 	_password = config["password"];
@@ -17,7 +36,7 @@ ctp_trader::ctp_trader(std::map<std::string, std::string>& config, std::set<std:
 	{
 		std::filesystem::create_directories(flow_path);
 	}
-	_td_api = CThostFtdcTraderApi::CreateFtdcTraderApi(flow_path);
+	_td_api = creator(flow_path);
 	_td_api->RegisterSpi(this);
 	_td_api->RegisterFront(const_cast<char*>(config["trade_front"].c_str()));
 	_td_api->SubscribePrivateTopic(THOST_TERT_QUICK);

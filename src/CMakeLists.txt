@@ -24,13 +24,21 @@ set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH}
 set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}
     "${PROJECT_SOURCE_DIR}/../bin")
 if(WIN32)
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}
-    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/win64/")
+    set(CTP_API_DIR "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/win64")
 else()
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}
-    "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/linux64/")
+    set(CTP_API_DIR "${PROJECT_SOURCE_DIR}/../api/ctp/v6.7.2/linux64")
 endif()
 
+# Create lib/ctp directory in bin
+file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/lib/ctp)
+
+# Copy dynamic libraries to bin/lib/ctp
+if(WIN32)
+    file(GLOB CTP_LIBS "${CTP_API_DIR}/*.dll")
+else()
+    file(GLOB CTP_LIBS "${CTP_API_DIR}/*.so")
+endif()
+file(COPY ${CTP_LIBS} DESTINATION ${EXECUTABLE_OUTPUT_PATH}/lib/ctp)
 
 add_subdirectory(trade-core)
 add_subdirectory(framework)
