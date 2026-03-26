@@ -170,10 +170,10 @@ struct MarketData
 	//double close_price; ///今收盘
 	double settlement_price; ///本次结算价
 
-	double bid_price[5]; ///申买价
-	int bid_volume[5]; ///申买量
-	double ask_price[5]; ///申卖价
-	int ask_volume[5]; ///申卖量
+	double bid_price[10]; ///申买价
+	int bid_volume[10]; ///申买量
+	double ask_price[10]; ///申卖价
+	int ask_volume[10]; ///申卖量
 
 	double average_price; ///当日均价
 	eTapeDir tape_dir;//盘口方向

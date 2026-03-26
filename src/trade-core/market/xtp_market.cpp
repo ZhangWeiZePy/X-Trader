@@ -189,7 +189,7 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
 	_tick.upper_limit_price = ptr->upper_limit_price;
 	_tick.lower_limit_price = ptr->lower_limit_price;
 
-	for (int i = 0; i < 5; ++i) {
+	for (int i = 0; i < 10; ++i) {
 		_tick.bid_price[i] = ptr->bid[i];
 		_tick.bid_volume[i] = ptr->bid_qty[i];
 		_tick.ask_price[i] = ptr->ask[i];
