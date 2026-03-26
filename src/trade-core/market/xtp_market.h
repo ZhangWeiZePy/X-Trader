@@ -34,6 +34,12 @@ public:
 
 	///深度行情通知，包含买一卖一队列
 	virtual void OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count) override;
+	///订阅逐笔应答
+	virtual void OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) override;
+	///退订逐笔应答
+	virtual void OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) override;
+	///逐笔数据通知（委托/成交）
+	virtual void OnTickByTick(XTPTBT *tbt_data) override;
 
 private:
 	XTP::API::QuoteApi* _md_api;

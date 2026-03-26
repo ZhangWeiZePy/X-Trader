@@ -24,7 +24,6 @@ int main()
 			std::cout << "| " << std::left << std::setw(20) << key
 				<< " | " << std::right << std::setw(28) << value << " |\n";
 		};
-
 		std::cout << "\n+----------------------+------------------------------+\n";
 		std::cout << "| Field                | Value                        |\n";
 		std::cout << "+----------------------+------------------------------+\n";
@@ -63,12 +62,42 @@ int main()
 		std::cout << "+-------+---------------+------------+---------------+------------+\n";
 	});
 
+	// 逐笔委托打印：用于观察逐笔委托回报字段
+	rt.get_market().bind_tbt_entrust_callback([](const TickByTickEntrustData& entrust) {
+		std::cout << "[TBT_ENTRUST]"
+			<< " instrument_id=" << entrust.instrument_id
+			<< " update_time=" << entrust.update_time
+			<< "." << entrust.update_millisec
+			<< " channel_no=" << entrust.channel_no
+			<< " seq=" << entrust.seq
+			<< " price=" << entrust.price
+			<< " qty=" << entrust.qty
+			<< " side=" << entrust.side
+			<< " ord_type=" << entrust.ord_type
+			<< " order_no=" << entrust.order_no
+			<< std::endl;
+	});
+
+	// 逐笔成交打印：按单行输出
+	rt.get_market().bind_tbt_trade_callback([](const TickByTickTradeData& trade) {
+		std::cout << "[TBT_TRADE]"
+			<< " instrument_id=" << trade.instrument_id
+			<< " update_time=" << trade.update_time
+			<< "." << trade.update_millisec
+			<< " channel_no=" << trade.channel_no
+			<< " seq=" << trade.seq
+			<< " price=" << trade.price
+			<< " qty=" << trade.qty
+			<< " money=" << trade.money
+			<< " bid_no=" << trade.bid_no
+			<< " ask_no=" << trade.ask_no
+			<< " trade_flag=" << trade.trade_flag
+			<< std::endl;
+	});
+
 	rt.start_service();
 	std::cout << "Market service started. Waiting for ticks..." << std::endl;
-	std::this_thread::sleep_for(std::chrono::seconds(20));
-	std::cout << "Market test finished." << std::endl;
 	rt.stop_service();
 	rt.release();
-
 	return 0;
 }

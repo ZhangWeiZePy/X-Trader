@@ -110,6 +110,8 @@ void xtp_market::subscribe()
 			strcpy(ppInsts[i], sh_contracts[i].c_str());
 		}
 		_md_api->SubscribeMarketData(ppInsts, sh_contracts.size(), XTP_EXCHANGE_SH);
+		// 同时订阅上交所逐笔（委托/成交）
+		_md_api->SubscribeTickByTick(ppInsts, sh_contracts.size(), XTP_EXCHANGE_SH);
 		for (size_t i = 0; i < sh_contracts.size(); ++i) delete[] ppInsts[i];
 		delete[] ppInsts;
 	}
@@ -121,6 +123,8 @@ void xtp_market::subscribe()
 			strcpy(ppInsts[i], sz_contracts[i].c_str());
 		}
 		_md_api->SubscribeMarketData(ppInsts, sz_contracts.size(), XTP_EXCHANGE_SZ);
+		// 同时订阅深交所逐笔（委托/成交）
+		_md_api->SubscribeTickByTick(ppInsts, sz_contracts.size(), XTP_EXCHANGE_SZ);
 		for (size_t i = 0; i < sz_contracts.size(); ++i) delete[] ppInsts[i];
 		delete[] ppInsts;
 	}
@@ -186,7 +190,7 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
 	_tick.open_price = ptr->open_price;
 	_tick.highest_price = ptr->high_price;
 	_tick.lowest_price = ptr->low_price;
-	_tick.upper_limit_price = ptr->upper_limit_price;
+    _tick.upper_limit_price = ptr->upper_limit_price;
 	_tick.lower_limit_price = ptr->lower_limit_price;
 
 	for (int i = 0; i < 10; ++i) {
@@ -211,4 +215,66 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
 
 	this->insert_event(_tick);
 	it->second = *ptr;
+}
+
+void xtp_market::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	// 逐笔订阅失败时输出错误信息
+	if (error_info && error_info->error_id != 0) {
+		std::cout << "xtp sub tick by tick error: " << error_info->error_msg << std::endl;
+	}
+}
+
+void xtp_market::OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+}
+
+void xtp_market::OnTickByTick(XTPTBT *tbt_data)
+{
+	// 防御性判断，避免空指针
+	if (!tbt_data) { return; }
+
+	// 将XTP时间戳(YYYYMMDDHHMMSSsss)拆分为秒级时间和毫秒
+	long long t = tbt_data->data_time;
+	int update_millisec = static_cast<int>(t % 1000);
+	t /= 1000;
+	int ss = static_cast<int>(t % 100); t /= 100;
+	int mm = static_cast<int>(t % 100); t /= 100;
+	int hh = static_cast<int>(t % 100);
+
+	if (tbt_data->type == XTP_TBT_ENTRUST)
+	{
+		// 逐笔委托：转换为框架内部结构并派发
+		TickByTickEntrustData entrust{};
+		strcpy(entrust.instrument_id, tbt_data->ticker);
+		sprintf(entrust.update_time, "%02d:%02d:%02d", hh, mm, ss);
+		entrust.update_millisec = update_millisec;
+		entrust.channel_no = tbt_data->entrust.channel_no;
+		entrust.seq = tbt_data->entrust.seq;
+		entrust.price = tbt_data->entrust.price;
+		entrust.qty = tbt_data->entrust.qty;
+		entrust.side = tbt_data->entrust.side;
+		entrust.ord_type = tbt_data->entrust.ord_type;
+		entrust.order_no = tbt_data->entrust.order_no;
+		emit_tbt_entrust(entrust);
+		return;
+	}
+
+	if (tbt_data->type == XTP_TBT_TRADE)
+	{
+		// 逐笔成交：转换为框架内部结构并派发
+		TickByTickTradeData trade{};
+		strcpy(trade.instrument_id, tbt_data->ticker);
+		sprintf(trade.update_time, "%02d:%02d:%02d", hh, mm, ss);
+		trade.update_millisec = update_millisec;
+		trade.channel_no = tbt_data->trade.channel_no;
+		trade.seq = tbt_data->trade.seq;
+		trade.price = tbt_data->trade.price;
+		trade.qty = tbt_data->trade.qty;
+		trade.money = tbt_data->trade.money;
+		trade.bid_no = tbt_data->trade.bid_no;
+		trade.ask_no = tbt_data->trade.ask_no;
+		trade.trade_flag = tbt_data->trade.trade_flag;
+		emit_tbt_trade(trade);
+	}
 }

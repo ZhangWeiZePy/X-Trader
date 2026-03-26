@@ -23,7 +23,7 @@ enum class eTapeStatus
 };
 
 //盘口信息
-struct Tape
+struct __attribute__((aligned(64))) Tape
 {
 	uint32_t last_volume;//现手
 	double last_open_interest;//增仓
@@ -62,7 +62,7 @@ struct Tape
 
 
 ///K线
-struct Sample
+struct __attribute__((aligned(64))) Sample
 {
 	std::string id;///合约代码
 	uint32_t period;///周期
@@ -177,6 +177,37 @@ struct MarketData
 
 	double average_price; ///当日均价
 	eTapeDir tape_dir;//盘口方向
+};
+
+///逐笔委托
+struct __attribute__((aligned(64))) TickByTickEntrustData
+{
+	InstrumentIDType instrument_id;///合约代码
+	TimeType update_time;///更新时间(HH:MM:SS)
+	int update_millisec;///更新毫秒
+	int32_t channel_no;///频道号
+	int64_t seq;///逐笔序号
+	double price;///委托价格
+	int64_t qty;///委托数量(上交所为剩余数量，深交所为委托数量)
+	char side;///买卖方向
+	char ord_type;///委托类型
+	int64_t order_no;///原始订单号(上交所有效)
+};
+
+///逐笔成交（从XTP逐笔成交消息转换后的统一结构）
+struct __attribute__((aligned(64))) TickByTickTradeData
+{
+	InstrumentIDType instrument_id;///合约代码
+	TimeType update_time;///更新时间(HH:MM:SS)
+	int update_millisec;///更新毫秒
+	int32_t channel_no;///频道号
+	int64_t seq;///逐笔序号
+	double price;///成交价格
+	int64_t qty;///成交数量
+	double money;///成交金额
+	int64_t bid_no;///买方订单号
+	int64_t ask_no;///卖方订单号
+	char trade_flag;///成交标识
 };
 
 
@@ -347,6 +378,10 @@ struct bar_receiver
 extern "C"
 {
 	typedef void (PORTER_FLAG* tick_callback)(const MarketData&);
+	///逐笔委托回调函数类型
+	typedef void (PORTER_FLAG* tbt_entrust_callback)(const TickByTickEntrustData&);
+	///逐笔成交回调函数类型
+	typedef void (PORTER_FLAG* tbt_trade_callback)(const TickByTickTradeData&);
 	typedef void (PORTER_FLAG* order_callback)(const Order&);
 	typedef void (PORTER_FLAG* trade_callback)(const Order&);
 	typedef void (PORTER_FLAG* cancel_callback)(const Order&);
