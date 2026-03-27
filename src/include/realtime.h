@@ -22,6 +22,8 @@ private:
 	OrderMap _order_map;
 
 	tick_callback _tick_callback;
+	tbt_entrust_callback _tbt_entrust_callback;
+	tbt_trade_callback _tbt_trade_callback;
 	update_callback _update_callback;
 	OrderEvent _order_event;
 
@@ -32,6 +34,16 @@ public:
 	inline void bind_tick_event(const tick_callback& tick_cb)
 	{
 		_tick_callback = tick_cb;
+	}
+
+	inline void bind_tbt_entrust_event(const tbt_entrust_callback& callback)
+	{
+		_tbt_entrust_callback = callback;
+	}
+
+	inline void bind_tbt_trade_event(const tbt_trade_callback& callback)
+	{
+		_tbt_trade_callback = callback;
 	}
 
 	inline void bind_update_callback(const update_callback& update_cb)
@@ -62,6 +74,8 @@ public:
 private:
 	void bind_callback();
 	void handle_tick(const MarketData& tick);
+	void handle_tbt_entrust(const TickByTickEntrustData& entrust);
+	void handle_tbt_trade(const TickByTickTradeData& trade);
 	void handle_order(const Order& order);
 	void handle_trade(const Order& order);
 	void handle_cancel(const Order& order);

@@ -109,6 +109,30 @@ private:
 		}
 	}
 
+	static inline void _tbt_entrust_callback(const TickByTickEntrustData& entrust)
+	{
+		auto it_c = _self->_contract_to_strategy_map.find(entrust.instrument_id);
+		if (it_c != _self->_contract_to_strategy_map.end())
+		{
+			for (auto strat : it_c->second)
+			{
+				if (strat) { strat->on_tbt_entrust(entrust); }
+			}
+		}
+	}
+
+	static inline void _tbt_trade_callback(const TickByTickTradeData& trade)
+	{
+		auto it_c = _self->_contract_to_strategy_map.find(trade.instrument_id);
+		if (it_c != _self->_contract_to_strategy_map.end())
+		{
+			for (auto strat : it_c->second)
+			{
+				if (strat) { strat->on_tbt_trade(trade); }
+			}
+		}
+	}
+
 	static inline void _update_callback()
 	{
 		if (_self)
