@@ -6,6 +6,12 @@ strategy::strategy(stratid_t id, frame& frame) : _id(id), _frame(frame) {}
 
 strategy::~strategy() {}
 
+bool strategy::set_config(const std::map<std::string, std::string>& config)
+{
+	_config = config;
+	return true;
+}
+
 
 orderref_t strategy::buy_open(eOrderFlag order_flag, const std::string& contract, double price, int volume)
 {

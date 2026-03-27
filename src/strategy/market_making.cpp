@@ -1,8 +1,58 @@
 #include "market_making.h"
 
+#include <algorithm>
+#include <cstdio>
+
+
+bool market_making::set_config(const std::map<std::string, std::string>& config)
+{
+	if (!strategy::set_config(config)) { return false; }
+	const auto& contract = get_config("contract");
+	if (contract.empty())
+	{
+		printf("market_making config missing contract\n");
+		return false;
+	}
+	_contract = contract;
+	get_contracts().clear();
+	get_contracts().insert(_contract);
+	return true;
+}
+
+void market_making::on_init()
+{
+	const auto& contract = get_config("contract");
+	const auto& price_delta = get_config("price_delta");
+	const auto& position_limit = get_config("position_limit");
+	const auto& once_vol = get_config("once_vol");
+	if (contract.empty() || price_delta.empty() || position_limit.empty() || once_vol.empty())
+	{
+		printf("market_making config fields are required: contract, price_delta, position_limit, once_vol\n");
+		return;
+	}
+	try
+	{
+		_contract = contract;
+		_price_delta = std::stod(price_delta);
+		_position_limit = static_cast<uint32_t>(std::stoul(position_limit));
+		_once_vol = std::stoi(once_vol);
+		if (_once_vol <= 0 || _position_limit == 0)
+		{
+			printf("market_making config value out of range\n");
+			return;
+		}
+		_inited = true;
+	}
+	catch (...)
+	{
+		printf("market_making config parse failed\n");
+	}
+}
+
 
 void market_making::on_tick(const MarketData& tick)
 {
+	if (!_inited) { return; }
 	if (strncmp(tick.update_time, "14:59", 5) == 0) { _is_closing = true; }
 	
 	const auto& posi = get_position(_contract);

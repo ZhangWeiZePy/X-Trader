@@ -15,3 +15,4 @@ bin/*.so
 /bin/libtrade-core.a
 /bin/lib/
 /bin/
+.trae

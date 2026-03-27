@@ -1,17 +1,25 @@
 #include "frame.h"
-#include "market_making.h"
+#include "strategy_loader.h"
+#include <cstdio>
 
 void start_running(const char* filename)
 {
-    frame run(filename);
-    std::vector<std::shared_ptr<strategy>> strategys;
-    strategys.emplace_back(std::make_shared<market_making>(1, run, "rb2409", 2, 10, 1));
+	frame run(filename);
+	auto strat = create_strategy_from_ini(filename, run);
+	if (!strat) { return; }
+	std::vector<std::shared_ptr<strategy>> strategys;
+	strategys.emplace_back(strat);
 	run.run_until_close(strategys);
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
-	start_running("./ini/simnow/3_117509.ini");
+	if (argc < 2)
+	{
+		printf("usage: femtotrader <ini_path>\n");
+		return 1;
+	}
+	start_running(argv[1]);
 	return 0;
 }
