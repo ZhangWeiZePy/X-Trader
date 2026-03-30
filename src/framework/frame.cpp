@@ -69,8 +69,6 @@ void frame::register_strategy(const std::vector<std::shared_ptr<strategy>>& stra
 		}
 	}
 	_realtime->bind_tick_event(_tick_callback);
-	_realtime->bind_tbt_entrust_event(_tbt_entrust_callback);
-	_realtime->bind_tbt_trade_event(_tbt_trade_callback);
 	_realtime->bind_update_callback(_update_callback);
 	_realtime->bind_order_event(OrderEvent{ _order_callback, _trade_callback, _cancel_callback, _error_callback });
 }

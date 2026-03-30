@@ -5,7 +5,7 @@
 
 realtime::realtime() :
 	_market(nullptr), _trader(nullptr), _realtime_thread(nullptr),
-	_tick_callback(nullptr), _tbt_entrust_callback(nullptr), _tbt_trade_callback(nullptr), _update_callback(nullptr), _order_event(),
+	_tick_callback(nullptr), _update_callback(nullptr), _order_event(),
 	_bind_cpu_core(-1), _loop_interval(1) {}
 
 realtime::~realtime() {}
@@ -142,8 +142,6 @@ void realtime::release()
 void realtime::bind_callback()
 {
 	get_market().bind_callback([this](const MarketData& tick)->void {handle_tick(tick); });
-	get_market().bind_tbt_entrust_callback([this](const TickByTickEntrustData& entrust)->void {handle_tbt_entrust(entrust); });
-	get_market().bind_tbt_trade_callback([this](const TickByTickTradeData& trade)->void {handle_tbt_trade(trade); });
 
 	get_trader().bind_callback([this](const Order& order)->void {
 		switch (order.event_flag)
@@ -166,23 +164,13 @@ void realtime::handle_tick(const MarketData& tick)
 	if (this->_tick_callback) { this->_tick_callback(tick); }
 }
 
-void realtime::handle_tbt_entrust(const TickByTickEntrustData& entrust)
-{
-	if (this->_tbt_entrust_callback) { this->_tbt_entrust_callback(entrust); }
-}
-
-void realtime::handle_tbt_trade(const TickByTickTradeData& trade)
-{
-	if (this->_tbt_trade_callback) { this->_tbt_trade_callback(trade); }
-}
-
 void realtime::handle_order(const Order& order)
 {
 	Order& o = _order_map[order.order_ref];
 	
 	if (o.volume_total != order.volume_total)
 	{
-		//ï¿½ï¿½ï¿½Â³Ö²ï¿½
+		//¸üÐÂ³Ö²Ö
 		const int& volume_total = order.volume_total;
 		Position& p = _position_map[order.instrument_id];
 		p.id = order.instrument_id;
@@ -236,7 +224,7 @@ void realtime::handle_order(const Order& order)
 		print_position(p, "handle_order");
 	}
 
-	//ï¿½ï¿½ï¿½Â±ï¿½ï¿½ï¿½
+	//¸üÐÂ±¨µ¥
 	memcpy(&o, &order, sizeof(struct Order));
 	
 	if (_order_event.on_order) { _order_event.on_order(order); }
@@ -246,12 +234,12 @@ void realtime::handle_order(const Order& order)
 
 void realtime::handle_trade(const Order& order)
 {
-	//ï¿½ï¿½ï¿½Â±ï¿½ï¿½ï¿½
+	//¸üÐÂ±¨µ¥
 	Order& o = _order_map[order.order_ref];
 	const int& vol_traded_once = order.volume_traded - o.volume_traded;
 	memcpy(&o, &order, sizeof(struct Order));
 	
-	//ï¿½ï¿½ï¿½Â³Ö²ï¿½
+	//¸üÐÂ³Ö²Ö
 	if (vol_traded_once > 0)
 	{
 		Position& p = _position_map[order.instrument_id];
@@ -331,7 +319,7 @@ void realtime::handle_trade(const Order& order)
 		print_position(p, "handle_trade");
 	}
 	
-	//É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö²ï¿½
+	//É¾³ý±¨µ¥¼°³Ö²Ö
 	if (order.order_status == eOrderStatus::AllTraded)
 	{
 		auto it_o = _order_map.find(order.order_ref);
@@ -360,7 +348,7 @@ void realtime::handle_trade(const Order& order)
 
 void realtime::handle_cancel(const Order& order)
 {
-	//ï¿½ï¿½ï¿½Â³Ö²ï¿½
+	//¸üÐÂ³Ö²Ö
 	Position& p = _position_map[order.instrument_id];
 	const int& volume_total = order.volume_total;
 
@@ -411,7 +399,7 @@ void realtime::handle_cancel(const Order& order)
 		}
 	}
 
-	//É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//É¾³ý±¨µ¥
 	auto iter = _order_map.find(order.order_ref);
 	if (iter != _order_map.end()) { _order_map.erase(iter); }
 	

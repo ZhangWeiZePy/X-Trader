@@ -25,8 +25,6 @@ public:
 	virtual bool set_config(const std::map<std::string, std::string>& config);
 	virtual void on_init() {}
 	virtual void on_tick(const MarketData& tick) {}
-	virtual void on_tbt_entrust(const TickByTickEntrustData& entrust) {}
-	virtual void on_tbt_trade(const TickByTickTradeData& trade) {}
 	virtual void on_order(const Order& order) {}
 	virtual void on_trade(const Order& order) {}
 	virtual void on_cancel(const Order& order) {}
