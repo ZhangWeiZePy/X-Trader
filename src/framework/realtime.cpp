@@ -170,7 +170,7 @@ void realtime::handle_order(const Order& order)
 	
 	if (o.volume_total != order.volume_total)
 	{
-		//更新持仓
+		//??????
 		const int& volume_total = order.volume_total;
 		Position& p = _position_map[order.instrument_id];
 		p.id = order.instrument_id;
@@ -224,7 +224,7 @@ void realtime::handle_order(const Order& order)
 		print_position(p, "handle_order");
 	}
 
-	//更新报单
+	//???±???
 	memcpy(&o, &order, sizeof(struct Order));
 	
 	if (_order_event.on_order) { _order_event.on_order(order); }
@@ -234,12 +234,12 @@ void realtime::handle_order(const Order& order)
 
 void realtime::handle_trade(const Order& order)
 {
-	//更新报单
+	//???±???
 	Order& o = _order_map[order.order_ref];
 	const int& vol_traded_once = order.volume_traded - o.volume_traded;
 	memcpy(&o, &order, sizeof(struct Order));
 	
-	//更新持仓
+	//??????
 	if (vol_traded_once > 0)
 	{
 		Position& p = _position_map[order.instrument_id];
@@ -319,7 +319,7 @@ void realtime::handle_trade(const Order& order)
 		print_position(p, "handle_trade");
 	}
 	
-	//删除报单及持仓
+	//????????????
 	if (order.order_status == eOrderStatus::AllTraded)
 	{
 		auto it_o = _order_map.find(order.order_ref);
@@ -348,7 +348,7 @@ void realtime::handle_trade(const Order& order)
 
 void realtime::handle_cancel(const Order& order)
 {
-	//更新持仓
+	//??????
 	Position& p = _position_map[order.instrument_id];
 	const int& volume_total = order.volume_total;
 
@@ -399,7 +399,7 @@ void realtime::handle_cancel(const Order& order)
 		}
 	}
 
-	//删除报单
+	//???????
 	auto iter = _order_map.find(order.order_ref);
 	if (iter != _order_map.end()) { _order_map.erase(iter); }
 	

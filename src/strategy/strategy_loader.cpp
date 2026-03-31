@@ -6,6 +6,7 @@
 
 #include "frame.h"
 #include "INIReader.h"
+#include "board_queue.h"
 #include "market_making.h"
 
 std::shared_ptr<strategy> create_strategy_from_ini(const std::string& ini_path, frame& run)
@@ -44,6 +45,30 @@ std::shared_ptr<strategy> create_strategy_from_ini(const std::string& ini_path, 
 		if (!strat->set_config(config))
 		{
 			printf("invalid market_making strategy config\n");
+			return nullptr;
+		}
+		return strat;
+	}
+	if (strategy_name == "board_queue")
+	{
+		auto strat = std::make_shared<board_queue>(static_cast<stratid_t>(strategy_id), run);
+		std::map<std::string, std::string> config;
+		config["contract"] = reader.Get("strategy.board_queue", "contract", "");
+		config["order_type"] = reader.Get("strategy.board_queue", "order_type", "");
+		config["quantity"] = reader.Get("strategy.board_queue", "quantity", "");
+		config["active_start_time"] = reader.Get("strategy.board_queue", "active_start_time", "");
+		config["active_end_time"] = reader.Get("strategy.board_queue", "active_end_time", "");
+		config["enable_queue_amount_enter"] = reader.Get("strategy.board_queue", "enable_queue_amount_enter", "");
+		config["queue_amount_enter"] = reader.Get("strategy.board_queue", "queue_amount_enter", "");
+		config["enable_queue_lots_enter"] = reader.Get("strategy.board_queue", "enable_queue_lots_enter", "");
+		config["queue_lots_enter"] = reader.Get("strategy.board_queue", "queue_lots_enter", "");
+		config["enable_queue_amount_exit"] = reader.Get("strategy.board_queue", "enable_queue_amount_exit", "");
+		config["queue_amount_exit"] = reader.Get("strategy.board_queue", "queue_amount_exit", "");
+		config["enable_queue_lots_exit"] = reader.Get("strategy.board_queue", "enable_queue_lots_exit", "");
+		config["queue_lots_exit"] = reader.Get("strategy.board_queue", "queue_lots_exit", "");
+		if (!strat->set_config(config))
+		{
+			printf("invalid board_queue strategy config\n");
 			return nullptr;
 		}
 		return strat;

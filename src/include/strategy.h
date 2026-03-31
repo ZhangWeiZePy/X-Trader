@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 #include <string>
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 
 class frame;
