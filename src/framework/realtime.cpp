@@ -126,7 +126,7 @@ void realtime::start_service()
             this->update();
             if (_loop_interval)
             {
-                std::this_thread::sleep_for(std::chrono::microseconds(_loop_interval));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(_loop_interval));
             }
         }
     });

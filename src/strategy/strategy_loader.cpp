@@ -7,7 +7,6 @@
 #include "frame.h"
 #include "INIReader.h"
 #include "board_queue.h"
-#include "market_making.h"
 
 std::shared_ptr<strategy> create_strategy_from_ini(const std::string &ini_path, frame &run)
 {
@@ -33,21 +32,6 @@ std::shared_ptr<strategy> create_strategy_from_ini(const std::string &ini_path, 
     {
         printf("strategy.id must be positive\n");
         return nullptr;
-    }
-    if (strategy_name == "market_making")
-    {
-        auto strat = std::make_shared<market_making>(static_cast<stratid_t>(strategy_id), run);
-        std::map<std::string, std::string> config;
-        config["contract"] = reader.Get("strategy.market_making", "contract", "");
-        config["price_delta"] = reader.Get("strategy.market_making", "price_delta", "");
-        config["position_limit"] = reader.Get("strategy.market_making", "position_limit", "");
-        config["once_vol"] = reader.Get("strategy.market_making", "once_vol", "");
-        if (!strat->set_config(config))
-        {
-            printf("invalid market_making strategy config\n");
-            return nullptr;
-        }
-        return strat;
     }
     if (strategy_name == "board_queue")
     {
