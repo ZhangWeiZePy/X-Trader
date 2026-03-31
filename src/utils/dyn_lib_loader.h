@@ -8,12 +8,20 @@
 #include <dlfcn.h>
 #endif
 
-class DynLibLoader {
+class DynLibLoader
+{
 public:
-    DynLibLoader() : handle_(nullptr) {}
-    ~DynLibLoader() { unload(); }
+    DynLibLoader() :
+        handle_(nullptr)
+    {}
 
-    bool load(const std::string& filepath) {
+    ~DynLibLoader()
+    {
+        unload();
+    }
+
+    bool load(const std::string &filepath)
+    {
 #ifdef _WIN32
         handle_ = LoadLibraryA(filepath.c_str());
 #else
@@ -22,7 +30,8 @@ public:
         return handle_ != nullptr;
     }
 
-    std::string get_error() const {
+    std::string get_error() const
+    {
 #ifdef _WIN32
         DWORD error = GetLastError();
         if (error == 0) return "";
@@ -33,13 +42,15 @@ public:
         LocalFree(messageBuffer);
         return message;
 #else
-        const char* err = dlerror();
+        const char *err = dlerror();
         return err ? std::string(err) : "";
 #endif
     }
 
-    void unload() {
-        if (handle_) {
+    void unload()
+    {
+        if (handle_)
+        {
 #ifdef _WIN32
             FreeLibrary((HMODULE)handle_);
 #else
@@ -50,8 +61,10 @@ public:
     }
 
     template<typename T>
-    T get_function(const std::string& func_name) {
-        if (!handle_) return nullptr;
+    T get_function(const std::string &func_name)
+    {
+        if (!handle_)
+            return nullptr;
 #ifdef _WIN32
         return reinterpret_cast<T>(GetProcAddress((HMODULE)handle_, func_name.c_str()));
 #else
@@ -60,5 +73,5 @@ public:
     }
 
 private:
-    void* handle_;
+    void *handle_;
 };
