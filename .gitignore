@@ -16,3 +16,4 @@ bin/*.so
 /bin/lib/
 /bin/
 .trae
+build*/
