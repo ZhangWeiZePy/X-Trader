@@ -117,6 +117,22 @@ bool board_queue::set_config(const std::map<std::string, std::string> &config)
     _contract = contract;
     get_contracts().clear();
     get_contracts().insert(_contract);
+    size_t key_w = 3;
+    size_t val_w = 5;
+    for (const auto &kv : config)
+    {
+        key_w = std::max(key_w, kv.first.size());
+        val_w = std::max(val_w, kv.second.size());
+    }
+    std::string sep = "+-" + std::string(key_w, '-') + "-+-" + std::string(val_w, '-') + "-+\n";
+    printf("%s", sep.c_str());
+    printf("| %-*s | %-*s |\n", (int)key_w, "Key", (int)val_w, "Value");
+    printf("%s", sep.c_str());
+    for (const auto &kv : config)
+    {
+        printf("| %-*s | %-*s |\n", (int)key_w, kv.first.c_str(), (int)val_w, kv.second.c_str());
+    }
+    printf("%s", sep.c_str());
     return true;
 }
 
