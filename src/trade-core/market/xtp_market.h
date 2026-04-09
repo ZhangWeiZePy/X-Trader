@@ -60,4 +60,5 @@ private:
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, XTPMD> _previous_tick_map{};
+    MarketData _tick;
 };

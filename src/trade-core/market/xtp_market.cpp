@@ -188,10 +188,7 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
         _previous_tick_map[ptr->ticker] = *ptr;
         return;
     }
-
-    static MarketData _tick{};
     strcpy(_tick.instrument_id, ptr->ticker);
-
     // Convert data_time (int64 YYYYMMDDHHMMSSsss) to update_time and update_millisec
     long long t = ptr->data_time;
     _tick.update_millisec = t % 1000;
@@ -202,7 +199,6 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
     t /= 100;
     int hh = t % 100;
     sprintf(_tick.update_time, "%02d:%02d:%02d", hh, mm, ss);
-
     _tick.pre_close_price = ptr->pre_close_price;
     _tick.pre_settlement_price = ptr->pre_settl_price;
     _tick.last_price = ptr->last_price;

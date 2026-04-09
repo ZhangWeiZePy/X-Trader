@@ -14,6 +14,14 @@ if (NOT DEFINED XTP_API_DIR)
 	endif ()
 endif ()
 
+if (NOT DEFINED TORA_API_DIR)
+	if (WIN32)
+		set(TORA_API_DIR "${PROJECT_SOURCE_DIR}/api/tora/v4.0.8/win64")
+	else ()
+		set(TORA_API_DIR "${PROJECT_SOURCE_DIR}/api/tora/v4.0.8/linux64")
+	endif ()
+endif ()
+
 aux_source_directory(market MARKET)
 aux_source_directory(trader TRADER)
 
@@ -25,6 +33,7 @@ target_include_directories(trade-core
 	"${PROJECT_SOURCE_DIR}/src/utils"
 	"${CTP_API_DIR}"
 	"${XTP_API_DIR}"
+	"${TORA_API_DIR}"
 )
 
 if (UNIX)

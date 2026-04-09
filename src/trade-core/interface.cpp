@@ -3,6 +3,8 @@
 #include "trader/ctp_trader.h"
 #include "market/xtp_market.h"
 #include "trader/xtp_trader.h"
+#include "market/tora_market.h"
+#include "trader/tora_trader.h"
 
 market_api *create_market(std::map<std::string, std::string> &config, std::set<std::string> contracts)
 {
@@ -13,6 +15,10 @@ market_api *create_market(std::map<std::string, std::string> &config, std::set<s
     if (config["counter"] == "ctp")
     {
         return new ctp_market(config, contracts);
+    }
+    if (config["counter"] == "tora")
+    {
+        return new tora_market(config, contracts);
     }
     return nullptr;
 }
@@ -35,6 +41,10 @@ trader_api *create_trader(std::map<std::string, std::string> &config, std::set<s
     if (config["counter"] == "ctp")
     {
         return new ctp_trader(config, contracts);
+    }
+    if (config["counter"] == "tora")
+    {
+        return new tora_trader(config, contracts);
     }
     return nullptr;
 
