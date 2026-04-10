@@ -1,24 +1,115 @@
-#include "realtime.h"
+#include "interface.h"
+#include "INIReader.h"
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <string>
 #include <thread>
 #include <chrono>
+#include <vector>
+#include <map>
 
-int main()
+static void print_usage()
 {
-    std::string ini_file = "./ini/xtp/test.ini";
-    std::set<std::string> contracts = {"600850"};
+    std::cout << "xtp_market_test <command> [options]\n\n";
+    std::cout << "Commands:\n";
+    std::cout << "  tick                    打印 tick 行情\n";
+    std::cout << "  tbt_entrust             打印逐笔委托\n";
+    std::cout << "  tbt_trade               打印逐笔成交\n\n";
+    std::cout << "Options:\n";
+    std::cout << "  --ini <path>             ini 路径，默认 ./ini/xtp/test.ini\n";
+    std::cout << "  --contracts <codes>      合约列表，逗号分隔，默认 600850\n";
+    std::cout << "  --timeout <ms>           等待行情就绪超时，默认 10000\n";
+    std::cout << "  --seconds <n>            运行时长，默认 10\n";
+}
 
-    realtime rt;
-    if (!rt.init(ini_file, contracts))
+static std::string get_opt(const std::vector<std::string> &args, const std::string &key, const std::string &def = "")
+{
+    for (size_t i = 0; i + 1 < args.size(); i++)
     {
-        std::cout << "Failed to init realtime with " << ini_file << std::endl;
-        return -1;
+        if (args[i] == key)
+        {
+            return args[i + 1];
+        }
+    }
+    return def;
+}
+
+static bool has_opt(const std::vector<std::string> &args, const std::string &key)
+{
+    for (const auto &a: args)
+    {
+        if (a == key)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static std::set<std::string> parse_contracts(const std::string &text)
+{
+    std::set<std::string> result;
+    std::string buf;
+    for (char ch: text)
+    {
+        if (ch == ',')
+        {
+            if (!buf.empty())
+            {
+                result.insert(buf);
+                buf.clear();
+            }
+            continue;
+        }
+        if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+        {
+            buf.push_back(ch);
+        }
+    }
+    if (!buf.empty())
+    {
+        result.insert(buf);
+    }
+    return result;
+}
+
+static bool load_market_config(const std::string &ini_file, std::map<std::string, std::string> &md_config)
+{
+    INIReader reader(ini_file);
+    if (reader.ParseError() < 0)
+    {
+        std::cout << "can't load " << ini_file << std::endl;
+        return false;
     }
 
-    rt.bind_tick_event([](const MarketData &tick)
+    md_config["market_front"] = reader.Get("market", "market_front", "");
+    md_config["broker_id"] = reader.Get("market", "broker_id", "");
+    md_config["user_id"] = reader.Get("market", "user_id", "");
+    md_config["password"] = reader.Get("market", "password", "");
+    md_config["counter"] = reader.Get("market", "counter", "");
+    return true;
+}
+
+static bool wait_market_ready(market_api *market, int timeout_ms)
+{
+    const auto start = std::chrono::steady_clock::now();
+    while (!market->_is_ready.load(std::memory_order_acquire))
+    {
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - start).count();
+        if (elapsed >= timeout_ms)
+        {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    return true;
+}
+
+static void bind_tick_printer(market_api &market)
+{
+    market.bind_callback([](const MarketData &tick)
     {
         std::cout << std::fixed << std::setprecision(4);
         auto print_row = [](const char *key, const auto &value)
@@ -63,45 +154,128 @@ int main()
         }
         std::cout << "+-------+---------------+------------+---------------+------------+\n";
     });
+}
 
-    // 逐笔委托打印：用于观察逐笔委托回报字段
-    // rt.get_market().bind_tbt_entrust_callback([](const TickByTickEntrustData &entrust)
-    // {
-    //     std::cout << "[TBT_ENTRUST]"
-    //             << " instrument_id=" << entrust.instrument_id
-    //             << " update_time=" << entrust.update_time
-    //             << "." << entrust.update_millisec
-    //             << " channel_no=" << entrust.channel_no
-    //             << " seq=" << entrust.seq
-    //             << " price=" << entrust.price
-    //             << " qty=" << entrust.qty
-    //             << " side=" << entrust.side
-    //             << " ord_type=" << entrust.ord_type
-    //             << " order_no=" << entrust.order_no
-    //             << std::endl;
-    // });
-    //
-    // // 逐笔成交打印：按单行输出
-    // rt.get_market().bind_tbt_trade_callback([](const TickByTickTradeData &trade)
-    // {
-    //     std::cout << "[TBT_TRADE]"
-    //             << " instrument_id=" << trade.instrument_id
-    //             << " update_time=" << trade.update_time
-    //             << "." << trade.update_millisec
-    //             << " channel_no=" << trade.channel_no
-    //             << " seq=" << trade.seq
-    //             << " price=" << trade.price
-    //             << " qty=" << trade.qty
-    //             << " money=" << trade.money
-    //             << " bid_no=" << trade.bid_no
-    //             << " ask_no=" << trade.ask_no
-    //             << " trade_flag=" << trade.trade_flag
-    //             << std::endl;
-    // });
+static void bind_tick_noop(market_api &market)
+{
+    market.bind_callback([](const MarketData &)
+            {});
+}
 
-    rt.start_service();
-    std::cout << "Market service started. Waiting for ticks..." << std::endl;
-    rt.stop_service();
-    rt.release();
+static void bind_tbt_entrust_printer(market_api &market)
+{
+    market.bind_tbt_entrust_callback([](const TickByTickEntrustData &entrust)
+    {
+        std::cout << "[TBT_ENTRUST]"
+                << " instrument_id=" << entrust.instrument_id
+                << " update_time=" << entrust.update_time
+                << "." << entrust.update_millisec
+                << " channel_no=" << entrust.channel_no
+                << " seq=" << entrust.seq
+                << " price=" << entrust.price
+                << " qty=" << entrust.qty
+                << " side=" << entrust.side
+                << " ord_type=" << entrust.ord_type
+                << " order_no=" << entrust.order_no
+                << std::endl;
+    });
+}
+
+static void bind_tbt_trade_printer(market_api &market)
+{
+    market.bind_tbt_trade_callback([](const TickByTickTradeData &trade)
+    {
+        std::cout << "[TBT_TRADE]"
+                << " instrument_id=" << trade.instrument_id
+                << " update_time=" << trade.update_time
+                << "." << trade.update_millisec
+                << " channel_no=" << trade.channel_no
+                << " seq=" << trade.seq
+                << " price=" << trade.price
+                << " qty=" << trade.qty
+                << " money=" << trade.money
+                << " bid_no=" << trade.bid_no
+                << " ask_no=" << trade.ask_no
+                << " trade_flag=" << trade.trade_flag
+                << std::endl;
+    });
+}
+
+int main(int argc, char **argv)
+{
+    std::vector<std::string> args;
+    args.reserve(static_cast<size_t>(argc));
+    for (int i = 0; i < argc; i++)
+    {
+        args.emplace_back(argv[i]);
+    }
+
+    if (argc < 2 || has_opt(args, "--help") || has_opt(args, "-h"))
+    {
+        print_usage();
+        return 0;
+    }
+
+    const std::string command = args[1];
+    const std::string ini_file = get_opt(args, "--ini", "./ini/xtp/test.ini");
+    const std::string contracts_text = get_opt(args, "--contracts", "600850");
+    const std::set<std::string> contracts = parse_contracts(contracts_text);
+    const int timeout_ms = std::stoi(get_opt(args, "--timeout", "10000"));
+    const int seconds = std::stoi(get_opt(args, "--seconds", "10"));
+    if (contracts.empty())
+    {
+        std::cout << "合约列表为空" << std::endl;
+        return -1;
+    }
+
+    std::map<std::string, std::string> md_config;
+    if (!load_market_config(ini_file, md_config))
+    {
+        return -1;
+    }
+
+    market_api *market = create_market(md_config, contracts);
+    if (!market)
+    {
+        std::cout << "创建行情接口失败" << std::endl;
+        return -2;
+    }
+
+    if (command == "tick")
+    {
+        bind_tick_printer(*market);
+    } else if (command == "tbt_entrust")
+    {
+        bind_tick_noop(*market);
+        bind_tbt_entrust_printer(*market);
+    } else if (command == "tbt_trade")
+    {
+        bind_tick_noop(*market);
+        bind_tbt_trade_printer(*market);
+    } else
+    {
+        print_usage();
+        destory_market(market);
+        return -1;
+    }
+
+    if (!wait_market_ready(market, timeout_ms))
+    {
+        std::cout << "行情接口未在超时内就绪" << std::endl;
+        market->release();
+        destory_market(market);
+        return -3;
+    }
+
+    std::cout << "Market service started. Waiting for events..." << std::endl;
+    const auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+    while (std::chrono::steady_clock::now() < end_time)
+    {
+        market->process_event();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    market->release();
+    destory_market(market);
     return 0;
 }
