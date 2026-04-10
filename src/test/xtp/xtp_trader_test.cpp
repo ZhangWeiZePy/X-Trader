@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <vector>
 
 static bool load_trader_config(const std::string &ini_file, std::map<std::string, std::string> &td_config)
 {
@@ -76,15 +77,133 @@ static void print_orders(const OrderMap &o_map)
     }
 }
 
-int main()
+static void print_usage()
 {
-    const std::string ini_file = "./ini/xtp/test.ini";
-    const std::set<std::string> contracts = {"600850"};
-    std::map<std::string, std::string> td_config;
+    std::cout << "xtp_trader_test <command> [options]\n\n";
+    std::cout << "Commands:\n";
+    std::cout << "  position                 持仓查询\n";
+    std::cout << "  order                    委托查询\n";
+    std::cout << "  insert                   下单功能\n";
+    std::cout << "  cancel                   撤单功能\n\n";
+    std::cout << "Common options:\n";
+    std::cout << "  --ini <path>             ini 路径，默认 ./ini/xtp/test.ini\n";
+    std::cout << "  --timeout <ms>           等待就绪超时，默认 10000\n";
+    std::cout << "  --contract <code>        合约代码（可选，默认 600850，用于订阅集合）\n\n";
+    std::cout << "Insert options:\n";
+    std::cout << "  --dir <BuyOpen|SellOpen|BuyClose|SellClose|BuyCloseToday|SellCloseToday|BuyCloseYesterday|SellCloseYesterday>\n";
+    std::cout << "  --flag <Limit|Market|FOK|FAK>\n";
+    std::cout << "  --price <double>\n";
+    std::cout << "  --volume <int>\n\n";
+    std::cout << "Cancel options:\n";
+    std::cout << "  --order_ref <uint64>\n";
+}
 
+static std::string get_opt(const std::vector<std::string> &args, const std::string &key, const std::string &def = "")
+{
+    for (size_t i = 0; i + 1 < args.size(); i++)
+    {
+        if (args[i] == key)
+        {
+            return args[i + 1];
+        }
+    }
+    return def;
+}
+
+static bool has_opt(const std::vector<std::string> &args, const std::string &key)
+{
+    for (const auto &a: args)
+    {
+        if (a == key)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool parse_dir(const std::string &text, eDirOffset &out)
+{
+    if (text == "BuyOpen")
+    {
+        out = eDirOffset::BuyOpen;
+        return true;
+    }
+    if (text == "SellOpen")
+    {
+        out = eDirOffset::SellOpen;
+        return true;
+    }
+    if (text == "BuyClose")
+    {
+        out = eDirOffset::BuyClose;
+        return true;
+    }
+    if (text == "SellClose")
+    {
+        out = eDirOffset::SellClose;
+        return true;
+    }
+    if (text == "BuyCloseToday")
+    {
+        out = eDirOffset::BuyCloseToday;
+        return true;
+    }
+    if (text == "SellCloseToday")
+    {
+        out = eDirOffset::SellCloseToday;
+        return true;
+    }
+    if (text == "BuyCloseYesterday")
+    {
+        out = eDirOffset::BuyCloseYesterday;
+        return true;
+    }
+    if (text == "SellCloseYesterday")
+    {
+        out = eDirOffset::SellCloseYesterday;
+        return true;
+    }
+    return false;
+}
+
+static bool parse_flag(const std::string &text, eOrderFlag &out)
+{
+    if (text == "Limit")
+    {
+        out = eOrderFlag::Limit;
+        return true;
+    }
+    if (text == "Market")
+    {
+        out = eOrderFlag::Market;
+        return true;
+    }
+    if (text == "FOK")
+    {
+        out = eOrderFlag::FOK;
+        return true;
+    }
+    if (text == "FAK")
+    {
+        out = eOrderFlag::FAK;
+        return true;
+    }
+    return false;
+}
+
+static trader_api *create_and_wait(const std::string &ini_file, const std::string &contract, int timeout_ms)
+{
+    std::map<std::string, std::string> td_config;
     if (!load_trader_config(ini_file, td_config))
     {
-        return -1;
+        return nullptr;
+    }
+
+    std::set<std::string> contracts;
+    if (!contract.empty())
+    {
+        contracts.insert(contract);
     }
 
     trader_api *trader = nullptr;
@@ -94,43 +213,158 @@ int main()
     } catch (const std::exception &ex)
     {
         std::cout << "创建交易接口失败: " << ex.what() << std::endl;
-        return -2;
+        return nullptr;
     }
 
-    if (!wait_trader_ready(trader, 10000))
+    if (!wait_trader_ready(trader, timeout_ms))
     {
         std::cout << "交易接口未在超时内就绪" << std::endl;
         destory_trader(trader);
-        return -3;
+        return nullptr;
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    return trader;
+}
 
-    InstrumentMap i_map;
-    PositionMap p_map;
-    OrderMap o_map;
-
-    std::cout << "[测试A] 查询持仓" << std::endl;
-    trader->get_trader_data(i_map, p_map, o_map);
-    print_positions(p_map);
-
-    std::cout << "[测试B] 下单一手 600850" << std::endl;
-    orderref_t order_ref = trader->insert_order(eOrderFlag::Market, "600850", eDirOffset::BuyOpen, 0.0, 100);
-    if (order_ref == null_orderref)
+int main(int argc, char **argv)
+{
+    std::vector<std::string> args;
+    args.reserve(static_cast<size_t>(argc));
+    for (int i = 0; i < argc; i++)
     {
-        std::cout << "下单失败，返回 null_orderref" << std::endl;
-    } else
-    {
-        std::cout << "下单请求已发送，order_ref=" << order_ref << std::endl;
+        args.emplace_back(argv[i]);
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    if (argc < 2 || has_opt(args, "--help") || has_opt(args, "-h"))
+    {
+        print_usage();
+        return 0;
+    }
 
-    std::cout << "[测试C] 查询委托" << std::endl;
-    trader->get_trader_data(i_map, p_map, o_map);
-    print_orders(o_map);
+    const std::string command = args[1];
+    const std::string ini_file = get_opt(args, "--ini", "./ini/xtp/test.ini");
+    const std::string contract = get_opt(args, "--contract", "600850");
+    const int timeout_ms = std::stoi(get_opt(args, "--timeout", "10000"));
 
-    trader->release();
-    destory_trader(trader);
-    return 0;
+    if (command == "position")
+    {
+        trader_api *trader = create_and_wait(ini_file, contract, timeout_ms);
+        if (!trader)
+        {
+            return -2;
+        }
+
+        InstrumentMap i_map;
+        PositionMap p_map;
+        OrderMap o_map;
+        trader->get_trader_data(i_map, p_map, o_map);
+        print_positions(p_map);
+        trader->release();
+        destory_trader(trader);
+        return 0;
+    }
+
+    if (command == "order")
+    {
+        trader_api *trader = create_and_wait(ini_file, contract, timeout_ms);
+        if (!trader)
+        {
+            return -2;
+        }
+
+        InstrumentMap i_map;
+        PositionMap p_map;
+        OrderMap o_map;
+        trader->get_trader_data(i_map, p_map, o_map);
+        print_orders(o_map);
+        trader->release();
+        destory_trader(trader);
+        return 0;
+    }
+
+    if (command == "insert")
+    {
+        eDirOffset dir{};
+        eOrderFlag flag{};
+
+        const std::string dir_text = get_opt(args, "--dir");
+        const std::string flag_text = get_opt(args, "--flag", "Limit");
+        const std::string contract_code = get_opt(args, "--contract", "600850");
+        const double price = std::stod(get_opt(args, "--price", "0"));
+        const int volume = std::stoi(get_opt(args, "--volume", "0"));
+
+        if (!parse_dir(dir_text, dir) || !parse_flag(flag_text, flag) || contract_code.empty() || price <= 0 ||
+            volume <= 0)
+        {
+            print_usage();
+            return -1;
+        }
+
+        trader_api *trader = create_and_wait(ini_file, contract_code, timeout_ms);
+        if (!trader)
+        {
+            return -2;
+        }
+
+        const orderref_t order_ref = trader->insert_order(flag, contract_code, dir, price, volume);
+        if (order_ref == null_orderref)
+        {
+            std::cout << "下单失败，返回 null_orderref" << std::endl;
+        } else
+        {
+            std::cout << "下单请求已发送，order_ref=" << order_ref << std::endl;
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        InstrumentMap i_map;
+        PositionMap p_map;
+        OrderMap o_map;
+        trader->get_trader_data(i_map, p_map, o_map);
+        print_orders(o_map);
+
+        trader->release();
+        destory_trader(trader);
+        return 0;
+    }
+
+    if (command == "cancel")
+    {
+        const std::string ref_text = get_opt(args, "--order_ref");
+        if (ref_text.empty())
+        {
+            print_usage();
+            return -1;
+        }
+
+        const orderref_t order_ref = static_cast<orderref_t>(std::strtoull(ref_text.c_str(), nullptr, 10));
+        if (order_ref == null_orderref)
+        {
+            std::cout << "order_ref 无效" << std::endl;
+            return -1;
+        }
+
+        trader_api *trader = create_and_wait(ini_file, contract, timeout_ms);
+        if (!trader)
+        {
+            return -2;
+        }
+
+        const bool ok = trader->cancel_order(order_ref);
+        std::cout << "撤单请求发送结果: " << (ok ? "true" : "false") << std::endl;
+
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        InstrumentMap i_map;
+        PositionMap p_map;
+        OrderMap o_map;
+        trader->get_trader_data(i_map, p_map, o_map);
+        print_orders(o_map);
+
+        trader->release();
+        destory_trader(trader);
+        return 0;
+    }
+
+    print_usage();
+    return -1;
 }

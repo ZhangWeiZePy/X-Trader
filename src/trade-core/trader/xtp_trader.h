@@ -96,6 +96,9 @@ public:
     virtual void OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, int request_id, bool is_last,
                               uint64_t session_id) override;
 
+    virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last,
+                              uint64_t session_id) override;
+
     /// @brief 请求查询报单响应回调（包含详细信息）
     /// @param order_info 查询到的报单详细信息
     /// @param error_info 查询发生错误时的错误信息
