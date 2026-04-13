@@ -166,7 +166,7 @@ void realtime::release()
 
 void realtime::bind_callback()
 {
-    get_market().bind_callback([this](const MarketData &tick)-> void
+    get_market().bind_callback([this](const OrderBookData &tick)-> void
     {
         handle_tick(tick);
     });
@@ -192,7 +192,7 @@ void realtime::bind_callback()
     });
 }
 
-void realtime::handle_tick(const MarketData &tick)
+void realtime::handle_tick(const OrderBookData &tick)
 {
     if (this->_tick_callback)
     {
@@ -265,7 +265,7 @@ void realtime::handle_order(const Order &order)
         print_position(p, "handle_order");
     }
 
-    //???¡À???
+    //???ï¿½ï¿½???
     memcpy(&o, &order, sizeof(struct Order));
 
     if (_order_event.on_order)
@@ -278,7 +278,7 @@ void realtime::handle_order(const Order &order)
 
 void realtime::handle_trade(const Order &order)
 {
-    //???¡À???
+    //???ï¿½ï¿½???
     Order &o = _order_map[order.order_ref];
     const int &vol_traded_once = order.volume_traded - o.volume_traded;
     memcpy(&o, &order, sizeof(struct Order));

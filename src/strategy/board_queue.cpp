@@ -278,20 +278,30 @@ inline bool board_queue::should_exit(double board_amount, double board_lots) con
     return by_amount || by_lots;
 }
 
-inline bool board_queue::compute_board_metrics(const MarketData &tick, double &board_amount, double &board_lots) const
+static std::string hhmmss_from_data_time(const int64_t data_time)
+{
+    long long t = data_time;
+    t /= 1000;
+    const int ss = static_cast<int>(t % 100);
+    t /= 100;
+    const int mm = static_cast<int>(t % 100);
+    t /= 100;
+    const int hh = static_cast<int>(t % 100);
+    char buf[9] = {0};
+    std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d", hh, mm, ss);
+    return std::string(buf);
+}
+
+inline bool board_queue::compute_board_metrics(const OrderBookData &tick, double &board_amount, double &board_lots) const
 {
     // 取买一价量作为封板口径
-    const double bid1_price = tick.bid_price[0];
-    const int bid1_volume = tick.bid_volume[0];
+    const double bid1_price = tick.bid[0];
+    const int64_t bid1_volume = tick.bid_qty[0];
+    printf("bid1_price=%f, bid1_volume=%lld\n", bid1_price, bid1_volume);
     board_amount = 0.0;
     board_lots = 0.0;
     // 买一无量则不构成封板
     if (bid1_volume <= 0)
-    {
-        return false;
-    }
-    // 仅当买一价等于涨停价，才按封板处理
-    if (std::fabs(bid1_price - tick.upper_limit_price) > 1e-6)
     {
         return false;
     }
@@ -301,7 +311,7 @@ inline bool board_queue::compute_board_metrics(const MarketData &tick, double &b
     return true;
 }
 
-void board_queue::on_tick(const MarketData &tick)
+void board_queue::on_tick(const OrderBookData &tick)
 {
     // 初始化失败时不参与交易
     if (unlikely(!_inited))
@@ -314,7 +324,7 @@ void board_queue::on_tick(const MarketData &tick)
         return;
     }
     // 更新最新行情时间与封板指标缓存，供撤单判断复用
-    _latest_tick_time = tick.update_time;
+    _latest_tick_time = hhmmss_from_data_time(tick.data_time);
     double board_amount = 0.0;
     double board_lots = 0.0;
     if (compute_board_metrics(tick, board_amount, board_lots))
@@ -349,7 +359,7 @@ void board_queue::on_tick(const MarketData &tick)
     }
 
     // 限价单按涨停价；市价单使用买一价作为传参价格
-    const double order_price = (_order_flag == eOrderFlag::Limit ? tick.upper_limit_price : tick.bid_price[0]);
+    const double order_price = tick.bid[0];
     // 发起买入开仓排板
     const orderref_t order_ref = buy_open(_order_flag, _contract, order_price, _quantity);
     if (order_ref != null_orderref)

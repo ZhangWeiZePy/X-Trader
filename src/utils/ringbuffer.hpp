@@ -77,7 +77,7 @@ public:
     //brief Inserts data into internal buffer, without blocking
     //param data element to be inserted into internal buffer
     //return True if data was inserted
-    bool insert(T data)
+    bool insert(const T &data)
     {
         size_t tmp_head = head.load(std::memory_order_relaxed);
         if ((tmp_head - tail.load(std::memory_order_acquire)) == buffer_size)

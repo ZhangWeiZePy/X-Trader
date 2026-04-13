@@ -30,7 +30,7 @@ public:
     virtual void on_init()
     {}
 
-    virtual void on_tick(const MarketData &tick)
+    virtual void on_tick(const OrderBookData &tick)
     {}
 
     virtual void on_order(const Order &order)

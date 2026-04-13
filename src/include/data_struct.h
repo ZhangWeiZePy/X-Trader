@@ -409,7 +409,7 @@ struct bar_receiver
 
 extern "C"
 {
-typedef void (PORTER_FLAG*tick_callback)(const MarketData &);
+typedef void (PORTER_FLAG*tick_callback)(const OrderBookData &);
 
 ///逐笔委托回调函数类型
 typedef void (PORTER_FLAG*tbt_entrust_callback)(const TickByTickEntrustData &);

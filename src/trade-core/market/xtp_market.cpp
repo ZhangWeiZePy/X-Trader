@@ -552,6 +552,7 @@ void xtp_market::emit_book(LocalBookState &book, XTP_EXCHANGE_TYPE exchange_id, 
     }
     book.ob_cache.exchange_id = static_cast<int32_t>(exchange_id);
     book.ob_cache.data_time = data_time;
+    this->insert_event(book.ob_cache);
     emit_orderbook(book.ob_cache);
 }
 
@@ -627,58 +628,7 @@ void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_
         local_it->second.data_time = ptr->data_time;
         emit_book(local_it->second, ptr->exchange_id, ptr->data_time, kBookUpdateStat);
     }
-
-    auto it = _previous_tick_map.find(ptr->ticker);
-    if (it == _previous_tick_map.end())
-    {
-        _previous_tick_map[ptr->ticker] = *ptr;
-        return;
-    }
-    strcpy(_tick.instrument_id, ptr->ticker);
-    // Convert data_time (int64 YYYYMMDDHHMMSSsss) to update_time and update_millisec
-    long long t = ptr->data_time;
-    _tick.update_millisec = t % 1000;
-    t /= 1000;
-    int ss = t % 100;
-    t /= 100;
-    int mm = t % 100;
-    t /= 100;
-    int hh = t % 100;
-    sprintf(_tick.update_time, "%02d:%02d:%02d", hh, mm, ss);
-    _tick.pre_close_price = ptr->pre_close_price;
-    _tick.pre_settlement_price = ptr->pre_settl_price;
-    _tick.last_price = ptr->last_price;
-    _tick.volume = ptr->qty;
-    _tick.last_volume = ptr->qty - it->second.qty;
-    _tick.open_interest = ptr->total_long_positon;
-    _tick.last_open_interest = ptr->total_long_positon - it->second.total_long_positon;
-    _tick.open_price = ptr->open_price;
-    _tick.highest_price = ptr->high_price;
-    _tick.lowest_price = ptr->low_price;
-    _tick.upper_limit_price = ptr->upper_limit_price;
-    _tick.lower_limit_price = ptr->lower_limit_price;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        _tick.bid_price[i] = ptr->bid[i];
-        _tick.bid_volume[i] = ptr->bid_qty[i];
-        _tick.ask_price[i] = ptr->ask[i];
-        _tick.ask_volume[i] = ptr->ask_qty[i];
-    }
-
-    if (ptr->last_price >= it->second.ask[0] || ptr->last_price >= ptr->ask[0])
-    {
-        _tick.tape_dir = eTapeDir::Up;
-    } else if (ptr->last_price <= it->second.bid[0] || ptr->last_price <= ptr->bid[0])
-    {
-        _tick.tape_dir = eTapeDir::Down;
-    } else
-    {
-        _tick.tape_dir = eTapeDir::Flat;
-    }
-
-    this->insert_event(_tick);
-    it->second = *ptr;
+    _previous_tick_map[ptr->ticker] = *ptr;
 }
 
 void xtp_market::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)

@@ -87,7 +87,7 @@ public:
 private:
     void bind_callback();
 
-    void handle_tick(const MarketData &tick);
+    void handle_tick(const OrderBookData &tick);
 
     void handle_order(const Order &order);
 

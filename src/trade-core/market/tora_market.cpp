@@ -197,7 +197,22 @@ void tora_market::OnRtnMarketData(TORALEV2API::CTORATstpLev2MarketDataField *pMa
         _tick.tape_dir = eTapeDir::Flat;
     }
 
-    this->insert_event(_tick);
+    OrderBookData ob{};
+    ob.exchange_id = 0;
+    strcpy(ob.instrument_id, _tick.instrument_id);
+    ob.last_price = _tick.last_price;
+    ob.qty = static_cast<int64_t>(_tick.volume);
+    ob.turnover = 0.0;
+    ob.trades_count = 0;
+    for (int i = 0; i < 10; ++i)
+    {
+        ob.bid[i] = _tick.bid_price[i];
+        ob.ask[i] = _tick.ask_price[i];
+        ob.bid_qty[i] = _tick.bid_volume[i];
+        ob.ask_qty[i] = _tick.ask_volume[i];
+    }
+    ob.data_time = 0;
+    this->insert_event(ob);
     it->second = *pMarketData;
 }
 

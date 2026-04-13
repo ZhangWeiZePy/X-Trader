@@ -3,7 +3,7 @@
 #include "event_center.hpp"
 #include "data_struct.h"
 
-class market_api : public event_ringbuffer<MarketData>
+class market_api : public event_ringbuffer<OrderBookData>
 {
 public:
     market_api() :

@@ -17,7 +17,7 @@ public:
     ~frame();
 
 private:
-    static inline void _tick_callback(const MarketData &tick)
+    static inline void _tick_callback(const OrderBookData &tick)
     {
         auto it_c = _self->_contract_to_strategy_map.find(tick.instrument_id);
         if (it_c != _self->_contract_to_strategy_map.end())
@@ -27,31 +27,6 @@ private:
                 if (strat)
                 {
                     strat->on_tick(tick);
-                }
-            }
-        }
-
-        auto it_r = _self->_resample.find(tick.instrument_id);
-        if (it_r != _self->_resample.end())
-        {
-            for (auto iter: it_r->second)
-            {
-                iter.second->insert_tick(tick);
-            }
-        }
-
-        auto it_t = _self->_tape_receiver.find(tick.instrument_id);
-        if (it_t != _self->_tape_receiver.end())
-        {
-            for (auto iter: it_t->second)
-            {
-                if (iter)
-                {
-                    Tape tape;
-                    tape.last_volume = tick.last_volume;
-                    tape.last_open_interest = tick.last_open_interest;
-                    tape.tape_dir = tick.tape_dir;
-                    iter->on_tape(tape);
                 }
             }
         }

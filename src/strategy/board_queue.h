@@ -16,7 +16,7 @@ public:
 
     virtual void on_init() override;
 
-    virtual void on_tick(const MarketData &tick) override;
+    virtual void on_tick(const OrderBookData &tick) override;
 
     virtual void on_order(const Order &order) override;
 
@@ -35,7 +35,7 @@ private:
 
     bool should_exit(double board_amount, double board_lots) const;
 
-    bool compute_board_metrics(const MarketData &tick, double &board_amount, double &board_lots) const;
+    bool compute_board_metrics(const OrderBookData &tick, double &board_amount, double &board_lots) const;
 
     void clear_active_order(orderref_t order_ref);
 
