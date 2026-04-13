@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <functional>
 
 class xtp_market : public market_api, public XTP::API::QuoteSpi
 {
@@ -18,9 +19,53 @@ public:
     virtual void release() override;
 
 private:
+    static constexpr uint8_t kBookUpdateNone = 0;
+    static constexpr uint8_t kBookUpdateBid = 1 << 0;
+    static constexpr uint8_t kBookUpdateAsk = 1 << 1;
+    static constexpr uint8_t kBookUpdateStat = 1 << 2;
+
     void subscribe();
 
     void unsubscribe();
+
+    struct OrderRefMeta
+    {
+        double price{0.0};
+        int64_t qty{0};
+        bool is_bid{false};
+    };
+
+    struct LocalBookState
+    {
+        std::map<double, int64_t, std::greater<double> > bids;
+        std::map<double, int64_t, std::less<double> > asks;
+        std::unordered_map<int64_t, OrderRefMeta> order_ref_index;
+        std::unordered_map<int32_t, int64_t> channel_seq_state;
+        OrderBookData ob_cache{};
+        bool initialized{false};
+        bool valid{false};
+        double last_price{0.0};
+        int64_t qty{0};
+        double turnover{0.0};
+        int64_t trades_count{0};
+        int64_t data_time{0};
+    };
+
+    void init_book_from_depth(const XTPMD &md);
+
+    uint8_t apply_tbt_entrust(const XTPTBT &tbt);
+
+    uint8_t apply_tbt_trade(const XTPTBT &tbt);
+
+    void refresh_top10_bid(LocalBookState &book);
+
+    void refresh_top10_ask(LocalBookState &book);
+
+    void emit_book(LocalBookState &book, XTP_EXCHANGE_TYPE exchange_id, int64_t data_time, uint8_t update_mask);
+
+    void mark_book_invalid_until_snapshot(LocalBookState &book);
+
+    bool check_and_update_seq(LocalBookState &book, int32_t channel_no, int64_t seq);
 
 public:
     ///当客户端与行情后台通信连接断开时，该方法被调用。
@@ -60,5 +105,6 @@ private:
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, XTPMD> _previous_tick_map{};
+    std::unordered_map<std::string, LocalBookState> _local_books{};
     MarketData _tick;
 };

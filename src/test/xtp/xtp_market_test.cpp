@@ -8,6 +8,7 @@
 #include <chrono>
 #include <vector>
 #include <map>
+#include <cstdio>
 
 static void print_usage()
 {
@@ -16,6 +17,7 @@ static void print_usage()
     std::cout << "  tick                    打印 tick 行情\n";
     std::cout << "  tbt_entrust             打印逐笔委托\n";
     std::cout << "  tbt_trade               打印逐笔成交\n\n";
+    std::cout << "  orderbook               打印本地重建订单薄\n\n";
     std::cout << "Options:\n";
     std::cout << "  --ini <path>             ini 路径，默认 ./ini/xtp/test.ini\n";
     std::cout << "  --contracts <codes>      合约列表，逗号分隔，默认 600850\n";
@@ -105,6 +107,33 @@ static bool wait_market_ready(market_api *market, int timeout_ms)
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     return true;
+}
+
+static std::string format_xtp_data_time(int64_t data_time)
+{
+    if (data_time <= 0)
+    {
+        return "N/A";
+    }
+    long long t = data_time;
+    const int ms = static_cast<int>(t % 1000);
+    t /= 1000;
+    const int ss = static_cast<int>(t % 100);
+    t /= 100;
+    const int mm = static_cast<int>(t % 100);
+    t /= 100;
+    const int hh = static_cast<int>(t % 100);
+    t /= 100;
+    const int dd = static_cast<int>(t % 100);
+    t /= 100;
+    const int mon = static_cast<int>(t % 100);
+    t /= 100;
+    const int yyyy = static_cast<int>(t % 10000);
+
+    char buf[32] = {0};
+    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d.%03d",
+                  yyyy, mon, dd, hh, mm, ss, ms);
+    return std::string(buf);
 }
 
 static void bind_tick_printer(market_api &market)
@@ -201,6 +230,44 @@ static void bind_tbt_trade_printer(market_api &market)
     });
 }
 
+static void bind_orderbook_printer(market_api &market)
+{
+    market.bind_orderbook_callback([](const OrderBookData &ob)
+    {
+        std::cout << std::fixed << std::setprecision(4);
+        auto print_row = [](const char *key, const auto &value)
+        {
+            std::cout << "| " << std::left << std::setw(20) << key
+                    << " | " << std::right << std::setw(28) << value << " |\n";
+        };
+        std::cout << "\n+----------------------+------------------------------+\n";
+        std::cout << "| Field                | Value                        |\n";
+        std::cout << "+----------------------+------------------------------+\n";
+        print_row("exchange_id", ob.exchange_id);
+        print_row("instrument_id", ob.instrument_id);
+        print_row("last_price", ob.last_price);
+        print_row("qty", ob.qty);
+        print_row("turnover", ob.turnover);
+        print_row("trades_count", ob.trades_count);
+        print_row("data_time", format_xtp_data_time(ob.data_time));
+        std::cout << "+----------------------+------------------------------+\n";
+
+        std::cout << "+-------+---------------+------------+---------------+------------+\n";
+        std::cout << "| Level | BidPrice      | BidVolume  | AskPrice      | AskVolume  |\n";
+        std::cout << "+-------+---------------+------------+---------------+------------+\n";
+        for (int i = 0; i < 10; ++i)
+        {
+            std::cout << "| " << std::left << std::setw(5) << (i + 1)
+                    << " | " << std::right << std::setw(13) << ob.bid[i]
+                    << " | " << std::setw(10) << ob.bid_qty[i]
+                    << " | " << std::setw(13) << ob.ask[i]
+                    << " | " << std::setw(10) << ob.ask_qty[i]
+                    << " |\n";
+        }
+        std::cout << "+-------+---------------+------------+---------------+------------+\n";
+    });
+}
+
 int main(int argc, char **argv)
 {
     std::vector<std::string> args;
@@ -252,6 +319,10 @@ int main(int argc, char **argv)
     {
         bind_tick_noop(*market);
         bind_tbt_trade_printer(*market);
+    } else if (command == "orderbook")
+    {
+        bind_tick_noop(*market);
+        bind_orderbook_printer(*market);
     } else
     {
         print_usage();

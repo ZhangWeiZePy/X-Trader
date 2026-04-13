@@ -223,6 +223,25 @@ struct __attribute__((aligned(64))) TickByTickTradeData
     char trade_flag; ///成交标识
 };
 
+///本地重建订单薄
+struct __attribute__((aligned(64))) OrderBookData
+{
+    int32_t exchange_id; ///交易所代码（XTP_EXCHANGE_TYPE数值）
+    InstrumentIDType instrument_id; ///合约代码
+
+    double last_price; ///最新价
+    int64_t qty; ///总成交量
+    double turnover; ///总成交金额
+    int64_t trades_count; ///总成交笔数
+
+    double bid[10]; ///十档申买价
+    double ask[10]; ///十档申卖价
+    int64_t bid_qty[10]; ///十档申买量
+    int64_t ask_qty[10]; ///十档申卖量
+
+    int64_t data_time; ///时间戳（YYYYMMDDHHMMSSsss）
+};
+
 
 ///合约
 struct Instrument
@@ -397,6 +416,9 @@ typedef void (PORTER_FLAG*tbt_entrust_callback)(const TickByTickEntrustData &);
 
 ///逐笔成交回调函数类型
 typedef void (PORTER_FLAG*tbt_trade_callback)(const TickByTickTradeData &);
+
+///本地订单薄回调函数类型
+typedef void (PORTER_FLAG*orderbook_callback)(const OrderBookData &);
 
 typedef void (PORTER_FLAG*order_callback)(const Order &);
 

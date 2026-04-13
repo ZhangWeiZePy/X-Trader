@@ -1,11 +1,65 @@
 #include "xtp_market.h"
+#include <algorithm>
 #include <iostream>
 #include <filesystem>
 #include <cstring>
 
+namespace
+{
+    inline bool is_bid_side(const char side)
+    {
+        return side == 'B' || side == '1';
+    }
+
+    inline bool is_ask_side(const char side)
+    {
+        return side == 'S' || side == '2';
+    }
+
+    template<typename BookType>
+    bool add_level_qty(BookType &book, const double price, const int64_t qty)
+    {
+        if (price <= 0.0 || qty <= 0)
+        {
+            return false;
+        }
+        auto it = book.find(price);
+        if (it == book.end())
+        {
+            book[price] = qty;
+            return true;
+        }
+        it->second += qty;
+        return true;
+    }
+
+    template<typename BookType>
+    bool reduce_level_qty(BookType &book, const double price, const int64_t qty)
+    {
+        if (price <= 0.0 || qty <= 0)
+        {
+            return false;
+        }
+        auto it = book.find(price);
+        if (it == book.end())
+        {
+            return false;
+        }
+        if (it->second <= qty)
+        {
+            book.erase(it);
+            return true;
+        }
+        it->second -= qty;
+        return true;
+    }
+}
+
 xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts) :
     _contracts(contracts), _md_api(nullptr)
 {
+    _local_books.reserve(_contracts.size() * 2 + 8);
+    _previous_tick_map.reserve(_contracts.size() * 2 + 8);
     if (config.find("counter") == config.end() || config["counter"].empty())
     {
         throw std::runtime_error("Missing or empty 'counter' in config");
@@ -154,6 +208,381 @@ void xtp_market::unsubscribe()
     // Implementation similar to subscribe but using UnSubscribeMarketData
 }
 
+void xtp_market::init_book_from_depth(const XTPMD &md)
+{
+    auto &book = _local_books[md.ticker];
+    book.bids.clear();
+    book.asks.clear();
+    book.order_ref_index.clear();
+    book.channel_seq_state.clear();
+    book.order_ref_index.reserve(4096);
+    book.channel_seq_state.reserve(64);
+    for (int i = 0; i < 10; ++i)
+    {
+        if (md.bid[i] > 0.0 && md.bid_qty[i] > 0)
+        {
+            book.bids[md.bid[i]] = md.bid_qty[i];
+        }
+        if (md.ask[i] > 0.0 && md.ask_qty[i] > 0)
+        {
+            book.asks[md.ask[i]] = md.ask_qty[i];
+        }
+    }
+    book.initialized = true;
+    book.valid = true;
+    book.last_price = md.last_price;
+    book.qty = md.qty;
+    book.turnover = md.turnover;
+    book.trades_count = md.trades_count;
+    book.data_time = md.data_time;
+    memset(&book.ob_cache, 0, sizeof(book.ob_cache));
+    book.ob_cache.exchange_id = static_cast<int32_t>(md.exchange_id);
+    strcpy(book.ob_cache.instrument_id, md.ticker);
+    refresh_top10_bid(book);
+    refresh_top10_ask(book);
+    emit_book(book, md.exchange_id, md.data_time, kBookUpdateBid | kBookUpdateAsk | kBookUpdateStat);
+}
+
+uint8_t xtp_market::apply_tbt_entrust(const XTPTBT &tbt)
+{
+    auto it = _local_books.find(tbt.ticker);
+    if (it == _local_books.end() || !it->second.initialized || !it->second.valid)
+    {
+        return kBookUpdateNone;
+    }
+    auto &book = it->second;
+    const auto &entrust = tbt.entrust;
+    book.data_time = tbt.data_time;
+
+    const bool is_bid = is_bid_side(entrust.side);
+    const bool is_ask = is_ask_side(entrust.side);
+    if (!is_bid && !is_ask)
+    {
+        return kBookUpdateNone;
+    }
+
+    bool changed = false;
+    uint8_t mask = kBookUpdateNone;
+    if (tbt.exchange_id == XTP_EXCHANGE_SH)
+    {
+        if (entrust.ord_type == 'A')
+        {
+            if (is_bid)
+            {
+                changed = add_level_qty(book.bids, entrust.price, entrust.qty);
+            } else if (is_ask)
+            {
+                changed = add_level_qty(book.asks, entrust.price, entrust.qty);
+            }
+            if (changed && entrust.order_no > 0)
+            {
+                book.order_ref_index[entrust.order_no] = OrderRefMeta{entrust.price, entrust.qty, is_bid};
+            }
+        } else if (entrust.ord_type == 'D')
+        {
+            if (entrust.order_no > 0)
+            {
+                auto idx_it = book.order_ref_index.find(entrust.order_no);
+                if (idx_it != book.order_ref_index.end())
+                {
+                    auto &meta = idx_it->second;
+                    if (meta.is_bid)
+                    {
+                        changed = reduce_level_qty(book.bids, meta.price, meta.qty);
+                        if (changed)
+                        {
+                            mask |= kBookUpdateBid;
+                        }
+                    } else
+                    {
+                        changed = reduce_level_qty(book.asks, meta.price, meta.qty);
+                        if (changed)
+                        {
+                            mask |= kBookUpdateAsk;
+                        }
+                    }
+                    book.order_ref_index.erase(idx_it);
+                } else
+                {
+                    if (is_bid)
+                    {
+                        changed = reduce_level_qty(book.bids, entrust.price, entrust.qty);
+                        if (changed)
+                        {
+                            mask |= kBookUpdateBid;
+                        }
+                    } else if (is_ask)
+                    {
+                        changed = reduce_level_qty(book.asks, entrust.price, entrust.qty);
+                        if (changed)
+                        {
+                            mask |= kBookUpdateAsk;
+                        }
+                    }
+                }
+            } else
+            {
+                if (is_bid)
+                {
+                    changed = reduce_level_qty(book.bids, entrust.price, entrust.qty);
+                    if (changed)
+                    {
+                        mask |= kBookUpdateBid;
+                    }
+                } else if (is_ask)
+                {
+                    changed = reduce_level_qty(book.asks, entrust.price, entrust.qty);
+                    if (changed)
+                    {
+                        mask |= kBookUpdateAsk;
+                    }
+                }
+            }
+        }
+    } else
+    {
+        if (is_bid)
+        {
+            changed = add_level_qty(book.bids, entrust.price, entrust.qty);
+            if (changed)
+            {
+                mask |= kBookUpdateBid;
+            }
+        } else if (is_ask)
+        {
+            changed = add_level_qty(book.asks, entrust.price, entrust.qty);
+            if (changed)
+            {
+                mask |= kBookUpdateAsk;
+            }
+        }
+    }
+    if (changed)
+    {
+        return mask;
+    }
+    return kBookUpdateNone;
+}
+
+uint8_t xtp_market::apply_tbt_trade(const XTPTBT &tbt)
+{
+    auto it = _local_books.find(tbt.ticker);
+    if (it == _local_books.end() || !it->second.initialized || !it->second.valid)
+    {
+        return kBookUpdateNone;
+    }
+    auto &book = it->second;
+    const auto &trade = tbt.trade;
+    book.data_time = tbt.data_time;
+    bool changed = false;
+    uint8_t mask = kBookUpdateNone;
+    const bool is_sz_cancel = (tbt.exchange_id == XTP_EXCHANGE_SZ && trade.trade_flag == '4');
+    if (!is_sz_cancel)
+    {
+        // 仅在有效成交记录时更新成交统计，避免撤单价(常为0)污染last_price。
+        if (trade.price > 0.0)
+        {
+            book.last_price = trade.price;
+            changed = true;
+        }
+        if (trade.qty > 0)
+        {
+            book.qty += trade.qty;
+            changed = true;
+        }
+        if (trade.money > 0.0)
+        {
+            book.turnover += trade.money;
+            changed = true;
+        } else if (trade.price > 0.0 && trade.qty > 0)
+        {
+            book.turnover += trade.price * static_cast<double>(trade.qty);
+            changed = true;
+        }
+        ++book.trades_count;
+        changed = true;
+        mask |= kBookUpdateStat;
+    }
+    auto reduce_with_order_ref = [&](const int64_t order_no) -> bool
+    {
+        if (order_no <= 0)
+        {
+            return false;
+        }
+        auto idx_it = book.order_ref_index.find(order_no);
+        if (idx_it == book.order_ref_index.end())
+        {
+            return false;
+        }
+        auto &meta = idx_it->second;
+        const int64_t reduce_qty = std::min<int64_t>(trade.qty, meta.qty);
+        bool reduced = false;
+        if (meta.is_bid)
+        {
+            reduced = reduce_level_qty(book.bids, meta.price, reduce_qty);
+            if (reduced)
+            {
+                mask |= kBookUpdateBid;
+            }
+        } else
+        {
+            reduced = reduce_level_qty(book.asks, meta.price, reduce_qty);
+            if (reduced)
+            {
+                mask |= kBookUpdateAsk;
+            }
+        }
+        if (reduce_qty >= meta.qty)
+        {
+            book.order_ref_index.erase(idx_it);
+        } else
+        {
+            meta.qty -= reduce_qty;
+        }
+        return reduced;
+    };
+
+    if (tbt.exchange_id == XTP_EXCHANGE_SH)
+    {
+        bool reduced = false;
+        reduced = reduce_with_order_ref(trade.bid_no) || reduced;
+        reduced = reduce_with_order_ref(trade.ask_no) || reduced;
+        if (!reduced)
+        {
+            if (trade.trade_flag == 'B')
+            {
+                reduced = reduce_level_qty(book.asks, trade.price, trade.qty);
+                if (reduced)
+                {
+                    mask |= kBookUpdateAsk;
+                }
+            } else if (trade.trade_flag == 'S')
+            {
+                reduced = reduce_level_qty(book.bids, trade.price, trade.qty);
+                if (reduced)
+                {
+                    mask |= kBookUpdateBid;
+                }
+            }
+        }
+        if (reduced)
+        {
+            changed = true;
+        }
+    } else
+    {
+        if (trade.trade_flag == 'F' || trade.trade_flag == '4')
+        {
+            bool reduced = reduce_level_qty(book.asks, trade.price, trade.qty);
+            if (reduced)
+            {
+                mask |= kBookUpdateAsk;
+            }
+            if (!reduced)
+            {
+                reduced = reduce_level_qty(book.bids, trade.price, trade.qty);
+                if (reduced)
+                {
+                    mask |= kBookUpdateBid;
+                }
+            }
+            if (reduced)
+            {
+                changed = true;
+            }
+        }
+    }
+    if (changed)
+    {
+        return mask;
+    }
+    return kBookUpdateNone;
+}
+
+void xtp_market::refresh_top10_bid(LocalBookState &book)
+{
+    memset(book.ob_cache.bid, 0, sizeof(book.ob_cache.bid));
+    memset(book.ob_cache.bid_qty, 0, sizeof(book.ob_cache.bid_qty));
+    int level = 0;
+    for (const auto &kv: book.bids)
+    {
+        if (level >= 10)
+        {
+            break;
+        }
+        book.ob_cache.bid[level] = kv.first;
+        book.ob_cache.bid_qty[level] = kv.second;
+        ++level;
+    }
+}
+
+void xtp_market::refresh_top10_ask(LocalBookState &book)
+{
+    memset(book.ob_cache.ask, 0, sizeof(book.ob_cache.ask));
+    memset(book.ob_cache.ask_qty, 0, sizeof(book.ob_cache.ask_qty));
+    int level = 0;
+    for (const auto &kv: book.asks)
+    {
+        if (level >= 10)
+        {
+            break;
+        }
+        book.ob_cache.ask[level] = kv.first;
+        book.ob_cache.ask_qty[level] = kv.second;
+        ++level;
+    }
+}
+
+void xtp_market::emit_book(LocalBookState &book, XTP_EXCHANGE_TYPE exchange_id, int64_t data_time, uint8_t update_mask)
+{
+    if (update_mask & kBookUpdateBid)
+    {
+        refresh_top10_bid(book);
+    }
+    if (update_mask & kBookUpdateAsk)
+    {
+        refresh_top10_ask(book);
+    }
+    if (update_mask & kBookUpdateStat)
+    {
+        book.ob_cache.last_price = book.last_price;
+        book.ob_cache.qty = book.qty;
+        book.ob_cache.turnover = book.turnover;
+        book.ob_cache.trades_count = book.trades_count;
+    }
+    book.ob_cache.exchange_id = static_cast<int32_t>(exchange_id);
+    book.ob_cache.data_time = data_time;
+    emit_orderbook(book.ob_cache);
+}
+
+void xtp_market::mark_book_invalid_until_snapshot(LocalBookState &book)
+{
+    book.valid = false;
+    book.order_ref_index.clear();
+    book.channel_seq_state.clear();
+}
+
+bool xtp_market::check_and_update_seq(LocalBookState &book, int32_t channel_no, int64_t seq)
+{
+    if (channel_no <= 0 || seq <= 0)
+    {
+        return true;
+    }
+    auto it = book.channel_seq_state.find(channel_no);
+    if (it == book.channel_seq_state.end())
+    {
+        book.channel_seq_state[channel_no] = seq;
+        return true;
+    }
+    const int64_t expected = it->second + 1;
+    if (seq != expected)
+    {
+        return false;
+    }
+    it->second = seq;
+    return true;
+}
+
 void xtp_market::OnDisconnected(int reason)
 {
     std::cout << "xtp md disconnected, reason=" << reason << std::endl;
@@ -182,6 +611,23 @@ void xtp_market::OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_las
 void xtp_market::OnDepthMarketData(XTPMD *ptr, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count,
                                    int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
 {
+    auto local_it = _local_books.find(ptr->ticker);
+    if (local_it == _local_books.end() || !local_it->second.initialized || !local_it->second.valid)
+    {
+        init_book_from_depth(*ptr);
+    } else
+    {
+        if (ptr->last_price > 0.0)
+        {
+            local_it->second.last_price = ptr->last_price;
+        }
+        local_it->second.qty = ptr->qty;
+        local_it->second.turnover = ptr->turnover;
+        local_it->second.trades_count = ptr->trades_count;
+        local_it->second.data_time = ptr->data_time;
+        emit_book(local_it->second, ptr->exchange_id, ptr->data_time, kBookUpdateStat);
+    }
+
     auto it = _previous_tick_map.find(ptr->ticker);
     if (it == _previous_tick_map.end())
     {
@@ -280,10 +726,7 @@ void xtp_market::OnTickByTick(XTPTBT *tbt_data)
         entrust.ord_type = tbt_data->entrust.ord_type;
         entrust.order_no = tbt_data->entrust.order_no;
         emit_tbt_entrust(entrust);
-        return;
-    }
-
-    if (tbt_data->type == XTP_TBT_TRADE)
+    } else if (tbt_data->type == XTP_TBT_TRADE)
     {
         // 逐笔成交：转换为框架内部结构并派发
         TickByTickTradeData trade{};
@@ -299,5 +742,46 @@ void xtp_market::OnTickByTick(XTPTBT *tbt_data)
         trade.ask_no = tbt_data->trade.ask_no;
         trade.trade_flag = tbt_data->trade.trade_flag;
         emit_tbt_trade(trade);
+    } else
+    {
+        return;
+    }
+
+    auto local_it = _local_books.find(tbt_data->ticker);
+    if (local_it == _local_books.end() || !local_it->second.initialized || !local_it->second.valid)
+    {
+        return;
+    }
+
+    int32_t channel_no = 0;
+    int64_t seq = 0;
+    if (tbt_data->type == XTP_TBT_ENTRUST)
+    {
+        channel_no = tbt_data->entrust.channel_no;
+        seq = tbt_data->entrust.seq;
+    } else if (tbt_data->type == XTP_TBT_TRADE)
+    {
+        channel_no = tbt_data->trade.channel_no;
+        seq = tbt_data->trade.seq;
+    }
+
+    if (!check_and_update_seq(local_it->second, channel_no, seq))
+    {
+        mark_book_invalid_until_snapshot(local_it->second);
+        return;
+    }
+
+    uint8_t update_mask = kBookUpdateNone;
+    if (tbt_data->type == XTP_TBT_ENTRUST)
+    {
+        update_mask = apply_tbt_entrust(*tbt_data);
+    } else if (tbt_data->type == XTP_TBT_TRADE)
+    {
+        update_mask = apply_tbt_trade(*tbt_data);
+    }
+
+    if (update_mask != kBookUpdateNone)
+    {
+        emit_book(local_it->second, tbt_data->exchange_id, tbt_data->data_time, update_mask);
     }
 }
