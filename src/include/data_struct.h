@@ -364,7 +364,6 @@ struct Order
     orderref_t order_ref; ///报单引用
     int front_id; ///前置编号
     int session_id; ///会话编号
-
     ExchangeIDType exchange_id; ///交易所代码
     InstrumentIDType instrument_id; ///合约代码
     eDirOffset dir_offset; ///买卖开平标志
@@ -373,26 +372,16 @@ struct Order
     int volume_total_original; ///数量
     int volume_traded; ///今成交数量
     int volume_total; ///剩余数量
-
     int request_id; ///请求编号
     OrderLocalIDType order_local_id; ///本地报单编号
     OrderSysIDType order_sys_id; ///报单编号
-
     eOrderSubmitStatus order_submit_status; ///报单提交状态
     eOrderStatus order_status; ///报单状态
     ErrorMsgType status_msg; ///状态信息
-
-    //DateType insert_date;///报单日期
     TimeType insert_time; ///委托时间
-    //TimeType	active_time;///激活时间
-    //TimeType suspend_time;///挂起时间
-    //TimeType update_time;///最后修改时间
     TimeType cancel_time; ///撤销时间
-
     int error_id; ///错误代码
     ErrorMsgType error_msg; ///错误信息
-
-    //bool is_cancelable = true;///是否可以撤销
 };
 
 const Order null_order{};

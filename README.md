@@ -40,3 +40,18 @@
 ## 开发者指南
 
 如需添加新策略，请继承`strategy`基类并实现相应的事件处理方法，如`on_tick()`, `on_bar()`, `on_order()`等。
+
+## 交易大屏 UI（V1）
+
+项目已补充盘中交易员场景的交易大屏 UI 方案（固定大屏、深色高信息密度风格），覆盖以下模块：
+- 交易账号管理
+- 行情源管理
+- 策略进程管理 / 交易任务 / 持仓汇总
+- 委托记录 / 成交记录（当日）
+- 行情展示（十档盘口 + 逐笔）与下单/撤单面板
+
+### 文档索引
+- `doc/ui/trading-desk-v1-design.md`：页面结构、模块规格、字段清单、交互规则、刷新策略
+- `doc/ui/trading-desk-v1-flows.md`：关键操作流程（登录、订阅、启停、下单撤单、异常处理）
+- `doc/ui/trading-desk-v1-data-contract.md`：UI 字段与 C++ 模型映射、事件模型、错误语义
+- `doc/ui/trading-desk-v1-frontend-plan.md`：Vue3 + Element Plus 落地脚手架与分阶段实现计划

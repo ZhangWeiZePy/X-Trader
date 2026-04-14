@@ -146,8 +146,6 @@ void frame::run_until_close(const std::vector<std::shared_ptr<strategy> > &strat
     {
         std::this_thread::sleep_for(std::chrono::seconds(delta_seconds));
     }
-    //std::this_thread::sleep_for(std::chrono::seconds(3600));
-    //send2wecom("close");
     _realtime->get_account();
     std::this_thread::sleep_for(std::chrono::seconds(60));
     _realtime->stop_service();

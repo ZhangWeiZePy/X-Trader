@@ -515,13 +515,9 @@ void realtime::print_order(const Order &order)
     printf("order_status = %s\n", geteOrderStatusString(order.order_status).c_str());
     printf("status_msg = %s\n", order.status_msg);
     printf("insert_time = %s\n", order.insert_time);
-    //printf("active_time = %s\n", order.active_time);
-    //printf("suspend_time = %s\n", order.suspend_time);
-    //printf("update_time = %s\n", order.update_time);
     printf("cancel_time = %s\n", order.cancel_time);
     printf("error_id = %d\n", order.error_id);
     printf("error_msg = %s\n", order.error_msg);
-    //printf("is_cancelable = %d\n", order.is_cancelable);
     printf("\n");
 }
 
