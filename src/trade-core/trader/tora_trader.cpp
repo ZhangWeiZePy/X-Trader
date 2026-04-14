@@ -46,15 +46,15 @@ tora_trader::tora_trader(std::map<std::string, std::string> &config,
         throw std::runtime_error("Failed to find symbol CreateTstpTraderApi in " + lib_path);
     }
 
-    _user_id = config["user_id"];
-    _password = config["password"];
-    _front_addr = config["trade_front"]; // format like "tcp://127.0.0.1:8000"
-    _department_id = config.count("department_id") ? config["department_id"] : "";
-    _shareholder_id_sh = config.count("shareholder_id_sh") ? config["shareholder_id_sh"] : "";
-    _shareholder_id_sz = config.count("shareholder_id_sz") ? config["shareholder_id_sz"] : "";
+    _cfg.user_id = config["user_id"];
+    _cfg.password = config["password"];
+    _cfg.front_addr = config["trade_front"]; // format like "tcp://127.0.0.1:8000"
+    _cfg.department_id = config.count("department_id") ? config["department_id"] : "";
+    _cfg.shareholder_id_sh = config.count("shareholder_id_sh") ? config["shareholder_id_sh"] : "";
+    _cfg.shareholder_id_sz = config.count("shareholder_id_sz") ? config["shareholder_id_sz"] : "";
 
     char flow_path[64]{};
-    sprintf(flow_path, "flow/tora/td/%s/", _user_id.c_str());
+    sprintf(flow_path, "flow/tora/td/%s/", _cfg.user_id.c_str());
     if (!std::filesystem::exists(flow_path)) {
         std::filesystem::create_directories(flow_path);
     }
@@ -67,7 +67,7 @@ tora_trader::tora_trader(std::map<std::string, std::string> &config,
     _td_api->RegisterSpi(this);
 
     char front_addr[128]{};
-    strcpy(front_addr, _front_addr.c_str());
+    strcpy(front_addr, _cfg.front_addr.c_str());
     _td_api->RegisterFront(front_addr);
     _td_api->SubscribePrivateTopic(TORASTOCKAPI::TORA_TERT_QUICK);
     _td_api->SubscribePublicTopic(TORASTOCKAPI::TORA_TERT_QUICK);
@@ -118,10 +118,10 @@ orderref_t tora_trader::insert_order(eOrderFlag order_flag, const std::string &c
 
     if (contract.length() > 0 && (contract[0] == '6' || contract[0] == '5')) {
         req.ExchangeID = TORASTOCKAPI::TORA_TSTP_EXD_SSE;
-        strcpy(req.ShareholderID, _shareholder_id_sh.c_str());
+        strcpy(req.ShareholderID, _cfg.shareholder_id_sh.c_str());
     } else {
         req.ExchangeID = TORASTOCKAPI::TORA_TSTP_EXD_SZSE;
-        strcpy(req.ShareholderID, _shareholder_id_sz.c_str());
+        strcpy(req.ShareholderID, _cfg.shareholder_id_sz.c_str());
     }
 
     to_tora_dirOffset(dir_offset, req);
@@ -200,11 +200,11 @@ void tora_trader::req_qry_order() {
 void tora_trader::OnFrontConnected() {
     std::cout << "tora td front connected" << std::endl;
     TORASTOCKAPI::CTORATstpReqUserLoginField req{};
-    strcpy(req.LogInAccount, _user_id.c_str());
+    strcpy(req.LogInAccount, _cfg.user_id.c_str());
     req.LogInAccountType = TORASTOCKAPI::TORA_TSTP_LACT_UserID;
-    strcpy(req.Password, _password.c_str());
-    if (!_department_id.empty()) {
-        strcpy(req.DepartmentID, _department_id.c_str());
+    strcpy(req.Password, _cfg.password.c_str());
+    if (!_cfg.department_id.empty()) {
+        strcpy(req.DepartmentID, _cfg.department_id.c_str());
     }
     _td_api->ReqUserLogin(&req, 1);
 }

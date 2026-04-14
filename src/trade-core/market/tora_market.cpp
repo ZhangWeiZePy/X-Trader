@@ -35,9 +35,9 @@ tora_market::tora_market(std::map<std::string, std::string> &config, std::set<st
     {
         throw std::runtime_error("Failed to find symbol CreateTstpLev2MdApi in " + lib_path);
     }
-    _user_id = config["user_id"];
-    _password = config["password"];
-    _front_addr = config["market_front"]; // format like "tcp://127.0.0.1:8000"
+    _cfg.user_id = config["user_id"];
+    _cfg.password = config["password"];
+    _cfg.front_addr = config["market_front"]; // format like "tcp://127.0.0.1:8000"
 
     TORALEV2API::TTORATstpMDSubModeType sub_mode = TORALEV2API::TORA_TSTP_MST_TCP;
     _md_api = creator(sub_mode, false);
@@ -49,7 +49,7 @@ tora_market::tora_market(std::map<std::string, std::string> &config, std::set<st
     _md_api->RegisterSpi(this);
     
     char front_addr[128]{};
-    strcpy(front_addr, _front_addr.c_str());
+    strcpy(front_addr, _cfg.front_addr.c_str());
     _md_api->RegisterFront(front_addr);
 
     // Some systems report "Operation now in progress" on TCP if we don't explicitly pass empty cpu cores or ignore the init error in a certain way
@@ -126,9 +126,9 @@ void tora_market::OnFrontConnected()
 {
     std::cout << "tora md front connected" << std::endl;
     TORALEV2API::CTORATstpReqUserLoginField req{};
-    strcpy(req.LogInAccount, _user_id.c_str());
+    strcpy(req.LogInAccount, _cfg.user_id.c_str());
     req.LogInAccountType = TORALEV2API::TORA_TSTP_LACT_UserID;
-    strcpy(req.Password, _password.c_str());
+    strcpy(req.Password, _cfg.password.c_str());
     _md_api->ReqUserLogin(&req, 1);
 }
 

@@ -16,6 +16,13 @@ public:
     virtual void release() override;
 
 private:
+    struct Config
+    {
+        std::string user_id;
+        std::string password;
+        std::string front_addr;
+    };
+
     void subscribe();
 
 public:
@@ -29,9 +36,7 @@ public:
 private:
     TORALEV2API::CTORATstpLev2MdApi *_md_api;
     DynLibLoader _loader;
-    std::string _user_id;
-    std::string _password;
-    std::string _front_addr;
+    Config _cfg{};
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, TORALEV2API::CTORATstpLev2MarketDataField> _previous_tick_map{};
