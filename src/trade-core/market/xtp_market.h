@@ -19,6 +19,16 @@ public:
     virtual void release() override;
 
 private:
+    struct Config
+    {
+        std::string server_ip;
+        int server_port{0};
+        std::string user_id;
+        std::string password;
+        int client_id{1};
+        XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
+    };
+
     static constexpr uint8_t kBookUpdateNone = 0;
     static constexpr uint8_t kBookUpdateBid = 1 << 0;
     static constexpr uint8_t kBookUpdateAsk = 1 << 1;
@@ -96,12 +106,7 @@ public:
 private:
     XTP::API::QuoteApi *_md_api;
     DynLibLoader _loader;
-    std::string _server_ip;
-    int _server_port;
-    std::string _user_id;
-    std::string _password;
-    int _client_id;
-    XTP_PROTOCOL_TYPE _protocol_type;
+    Config _cfg{};
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, XTPMD> _previous_tick_map{};

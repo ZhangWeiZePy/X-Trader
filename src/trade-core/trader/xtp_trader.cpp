@@ -327,13 +327,13 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     {
         throw std::runtime_error("Failed to find symbol CreateTraderApi in " + lib_path);
     }
-    _user_id = config["user_id"];
-    _password = config["password"];
-    _client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
-    printf("xtp trader client_id: %d\n", _client_id);
-    if (_client_id < 1 || _client_id > 99)
+    _cfg.user_id = config["user_id"];
+    _cfg.password = config["password"];
+    _cfg.client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
+    printf("xtp trader client_id: %d\n", _cfg.client_id);
+    if (_cfg.client_id < 1 || _cfg.client_id > 99)
     {
-        throw std::runtime_error("Invalid XTP client_id (must be 1~99): " + std::to_string(_client_id));
+        throw std::runtime_error("Invalid XTP client_id (must be 1~99): " + std::to_string(_cfg.client_id));
     }
     std::string front = config["trade_front"];
     size_t pos = front.find("://");
@@ -344,18 +344,18 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     pos = front.find(":");
     if (pos != std::string::npos)
     {
-        _server_ip = front.substr(0, pos);
-        _server_port = std::stoi(front.substr(pos + 1));
+        _cfg.server_ip = front.substr(0, pos);
+        _cfg.server_port = std::stoi(front.substr(pos + 1));
     } else
     {
-        _server_ip = front;
-        _server_port = 0;
+        _cfg.server_ip = front;
+        _cfg.server_port = 0;
     }
 
     int sock_type = config.count("sock_type") ? std::stoi(config["sock_type"]) : 1;
-    _protocol_type = (sock_type == 2) ? XTP_PROTOCOL_UDP : XTP_PROTOCOL_TCP;
+    _cfg.protocol_type = (sock_type == 2) ? XTP_PROTOCOL_UDP : XTP_PROTOCOL_TCP;
 
-    std::filesystem::path flow_dir = std::filesystem::path("flow") / "xtp" / "td" / _user_id;
+    std::filesystem::path flow_dir = std::filesystem::path("flow") / "xtp" / "td" / _cfg.user_id;
     std::filesystem::create_directories(flow_dir);
 
     std::string flow_path = std::filesystem::absolute(flow_dir).string();
@@ -371,12 +371,12 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     }
 #endif
 
-    const uint8_t client_id_u8 = static_cast<uint8_t>(_client_id);
+    const uint8_t client_id_u8 = static_cast<uint8_t>(_cfg.client_id);
     _td_api = creator(client_id_u8, flow_path.c_str(), XTP_LOG_LEVEL_INFO);
     if (!_td_api)
     {
         throw std::runtime_error("Failed to create XTP Trader API, lib_path=" + lib_path +
-                                 ", client_id=" + std::to_string(_client_id) + ", flow_path=" + flow_path);
+                                 ", client_id=" + std::to_string(_cfg.client_id) + ", flow_path=" + flow_path);
     }
 
     _td_api->RegisterSpi(this);
@@ -396,7 +396,8 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
         _td_api->SetSoftwareKey(software_key.c_str());
     }
 
-    _session_id = _td_api->Login(_server_ip.c_str(), _server_port, _user_id.c_str(), _password.c_str(), _protocol_type);
+    _session_id = _td_api->Login(_cfg.server_ip.c_str(), _cfg.server_port, _cfg.user_id.c_str(),
+                                 _cfg.password.c_str(), _cfg.protocol_type);
     if (_session_id == 0)
     {
         XTPRI *error_info = _td_api->GetApiLastError();

@@ -109,6 +109,16 @@ public:
                                 uint64_t session_id) override;
 
 private:
+    struct Config
+    {
+        std::string server_ip;
+        int server_port{0};
+        std::string user_id;
+        std::string password;
+        int client_id{1};
+        XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
+    };
+
     /// @brief 内部调用，主动请求查询持仓
     void req_qry_position();
 
@@ -118,14 +128,9 @@ private:
 private:
     XTP::API::TraderApi *_td_api;
     DynLibLoader _loader;
-    std::string _server_ip;
-    int _server_port;
-    std::string _user_id;
-    std::string _password;
-    int _client_id;
+    Config _cfg{};
     uint64_t _session_id;
     std::string _trading_day;
-    XTP_PROTOCOL_TYPE _protocol_type;
 
     std::set<std::string> _contracts;
     InstrumentMap _instrument_map;

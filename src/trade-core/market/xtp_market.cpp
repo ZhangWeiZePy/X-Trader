@@ -82,38 +82,38 @@ xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std:
     {
         throw std::runtime_error("Failed to find symbol CreateQuoteApi in " + lib_path);
     }
-    _user_id = config["user_id"];
-    _password = config["password"];
-    _client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
-    printf("xtp market client_id: %d\n", _client_id);
+    _cfg.user_id = config["user_id"];
+    _cfg.password = config["password"];
+    _cfg.client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
+    printf("xtp market client_id: %d\n", _cfg.client_id);
     std::string front = config["market_front"]; // format like "tcp://127.0.0.1:8000" or "127.0.0.1:8000"
     size_t pos = front.find("://");
     if (pos != std::string::npos)
     {
         front = front.substr(pos + 3);
     }
-    pos = front.find(":");
+    pos = front.find(':');
     if (pos != std::string::npos)
     {
-        _server_ip = front.substr(0, pos);
-        _server_port = std::stoi(front.substr(pos + 1));
+        _cfg.server_ip = front.substr(0, pos);
+        _cfg.server_port = std::stoi(front.substr(pos + 1));
     } else
     {
-        _server_ip = front;
-        _server_port = 0;
+        _cfg.server_ip = front;
+        _cfg.server_port = 0;
     }
 
     int sock_type = config.count("sock_type") ? std::stoi(config["sock_type"]) : 1;
-    _protocol_type = (sock_type == 2) ? XTP_PROTOCOL_UDP : XTP_PROTOCOL_TCP;
+    _cfg.protocol_type = (sock_type == 2) ? XTP_PROTOCOL_UDP : XTP_PROTOCOL_TCP;
 
     char flow_path[64]{};
-    sprintf(flow_path, "flow/xtp/md/%s/", _user_id.c_str());
+    sprintf(flow_path, "flow/xtp/md/%s/", _cfg.user_id.c_str());
     if (!std::filesystem::exists(flow_path))
     {
         std::filesystem::create_directories(flow_path);
     }
 
-    _md_api = creator(_client_id, flow_path, XTP_LOG_LEVEL_INFO);
+    _md_api = creator(_cfg.client_id, flow_path, XTP_LOG_LEVEL_INFO);
     if (!_md_api)
     {
         throw std::runtime_error("Failed to create XTP Quote API");
@@ -122,7 +122,8 @@ xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std:
     _md_api->SetHeartBeatInterval(15);
     _md_api->RegisterSpi(this);
 
-    int ret = _md_api->Login(_server_ip.c_str(), _server_port, _user_id.c_str(), _password.c_str(), _protocol_type);
+    int ret = _md_api->Login(_cfg.server_ip.c_str(), _cfg.server_port, _cfg.user_id.c_str(),
+                             _cfg.password.c_str(), _cfg.protocol_type);
     if (ret != 0)
     {
         XTPRI *error_info = _md_api->GetApiLastError();
