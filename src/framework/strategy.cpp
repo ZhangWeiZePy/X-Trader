@@ -18,31 +18,37 @@ bool strategy::set_config(const std::map<std::string, std::string> &config)
 
 orderref_t strategy::buy_open(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("buy_open(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::BuyOpen, price, volume);
 }
 
 orderref_t strategy::sell_open(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("sell_open(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::SellOpen, price, volume);
 }
 
 orderref_t strategy::buy_close(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("buy_close(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::BuyClose, price, volume);
 }
 
 orderref_t strategy::sell_close(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("sell_close(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::SellClose, price, volume);
 }
 
 orderref_t strategy::buy_close_today(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("buy_close_today(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::BuyCloseToday, price, volume);
 }
 
 orderref_t strategy::sell_close_today(eOrderFlag order_flag, const std::string &contract, double price, int volume)
 {
+    printf("sell_close_today(%s, %f, %d)\n", contract.c_str(), price, volume);
     return _frame.insert_order(_id, order_flag, contract, eDirOffset::SellCloseToday, price, volume);
 }
 
@@ -58,6 +64,7 @@ orderref_t strategy::sell_close_yesterday(eOrderFlag order_flag, const std::stri
 
 bool strategy::cancel_order(const orderref_t order_ref)
 {
+    printf("cancel_order(%lu)\n", order_ref);
     return _frame.cancel_order(order_ref);
 }
 

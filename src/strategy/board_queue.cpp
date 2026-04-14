@@ -297,7 +297,6 @@ inline bool board_queue::compute_board_metrics(const OrderBookData &tick, double
     // 取买一价量作为封板口径
     const double bid1_price = tick.bid[0];
     const int64_t bid1_volume = tick.bid_qty[0];
-    printf("bid1_price=%f, bid1_volume=%lld\n", bid1_price, bid1_volume);
     board_amount = 0.0;
     board_lots = 0.0;
     // 买一无量则不构成封板
@@ -336,7 +335,8 @@ void board_queue::on_tick(const OrderBookData &tick)
         _latest_board_amount = 0.0;
         _latest_board_lots = 0.0;
     }
-
+    printf("board_queue latest tick time: %s, board amount: %.2f, board lots: %.2f, active order ref: %lld\n",
+        _latest_tick_time.c_str(), _latest_board_amount, _latest_board_lots, _active_orderref);
     // 有活动单时不重复下单
     if (_active_orderref != null_orderref)
     {
