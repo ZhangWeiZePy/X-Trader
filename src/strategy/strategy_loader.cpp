@@ -50,6 +50,8 @@ std::shared_ptr<strategy> create_strategy_from_ini(const std::string &ini_path, 
         config["queue_amount_exit"] = reader.Get("strategy.board_queue", "queue_amount_exit", "");
         config["enable_queue_lots_exit"] = reader.Get("strategy.board_queue", "enable_queue_lots_exit", "");
         config["queue_lots_exit"] = reader.Get("strategy.board_queue", "queue_lots_exit", "");
+        config["allow_reenter_after_cancel"] = reader.Get("strategy.board_queue", "allow_reenter_after_cancel", "false");
+        config["max_reenter_times"] = reader.Get("strategy.board_queue", "max_reenter_times", "0");
         if (!strat->set_config(config))
         {
             printf("invalid board_queue strategy config\n");

@@ -182,6 +182,24 @@ void board_queue::on_init()
             printf("board_queue enable flags invalid\n");
             return;
         }
+        // 解析撤单后是否允许重复下单（可选配置，默认 false）
+        const std::string allow_reenter_raw = trim_copy(get_config("allow_reenter_after_cancel"));
+        if (!allow_reenter_raw.empty() && !parse_bool(allow_reenter_raw, _allow_reenter_after_cancel))
+        {
+            printf("board_queue allow_reenter_after_cancel invalid\n");
+            return;
+        }
+        // 解析最大重复次数（可选配置，默认 0，表示首单后不重复）
+        const std::string max_reenter_raw = trim_copy(get_config("max_reenter_times"));
+        if (!max_reenter_raw.empty())
+        {
+            _max_reenter_times = std::stoi(max_reenter_raw);
+            if (_max_reenter_times < 0)
+            {
+                printf("board_queue max_reenter_times must be >= 0\n");
+                return;
+            }
+        }
 
         // 若启用“金额排板”，阈值必须为正数
         if (_enable_queue_amount_enter)
@@ -342,10 +360,23 @@ void board_queue::on_tick(const OrderBookData &tick)
     {
         return;
     }
-    // 仅首单排板：下过一次成功单后不再重挂
+    // 首单后的重下单逻辑：
+    // 1) 默认与原逻辑一致，只允许首单；
+    // 2) 若启用撤单后重下，只在“收到撤单回报后”且未超次数时允许再次下单。
     if (_has_placed_once)
     {
-        return;
+        if (!_allow_reenter_after_cancel)
+        {
+            return;
+        }
+        if (!_pending_reenter_after_cancel)
+        {
+            return;
+        }
+        if (_reenter_used_times >= _max_reenter_times)
+        {
+            return;
+        }
     }
     // 不在有效时间内不下单
     if (!in_active_window(_latest_tick_time))
@@ -366,7 +397,15 @@ void board_queue::on_tick(const OrderBookData &tick)
     {
         // 记录活动订单，并锁定“首单已使用”
         _active_orderref = order_ref;
-        _has_placed_once = true;
+        if (_has_placed_once)
+        {
+            // 只有撤单后触发的重下单才计入重复次数
+            _reenter_used_times++;
+        } else
+        {
+            _has_placed_once = true;
+        }
+        _pending_reenter_after_cancel = false;
     }
 }
 
@@ -412,18 +451,25 @@ void board_queue::on_trade(const Order &order)
 {
     // 成交通知：清理活动单引用
     clear_active_order(order.order_ref);
+    _pending_reenter_after_cancel = false;
 }
 
 void board_queue::on_cancel(const Order &order)
 {
     // 撤单通知：清理活动单引用
     clear_active_order(order.order_ref);
+    // 仅在开启配置时允许“撤单后重下”
+    if (_allow_reenter_after_cancel)
+    {
+        _pending_reenter_after_cancel = true;
+    }
 }
 
 void board_queue::on_error(const Order &order)
 {
     // 报错通知：清理活动单引用
     clear_active_order(order.order_ref);
+    _pending_reenter_after_cancel = false;
 }
 
 void board_queue::on_update()

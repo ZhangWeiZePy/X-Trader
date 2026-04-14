@@ -57,6 +57,10 @@ private:
 
     bool _inited = false;
     bool _has_placed_once = false;
+    bool _allow_reenter_after_cancel = false;
+    int _max_reenter_times = 0;
+    int _reenter_used_times = 0;
+    bool _pending_reenter_after_cancel = false;
     orderref_t _active_orderref = null_orderref;
     std::string _latest_tick_time;
     double _latest_board_amount = 0.0;
