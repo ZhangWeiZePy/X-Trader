@@ -89,6 +89,8 @@ static bool load_market_config(const std::string &ini_file, std::map<std::string
     md_config["broker_id"] = reader.Get("market", "broker_id", "");
     md_config["user_id"] = reader.Get("market", "user_id", "");
     md_config["password"] = reader.Get("market", "password", "");
+    md_config["client_id"] = reader.Get("market", "client_id", "");
+    md_config["sock_type"] = reader.Get("market", "sock_type", "");
     md_config["counter"] = reader.Get("market", "counter", "");
     return true;
 }
@@ -289,6 +291,10 @@ int main(int argc, char **argv)
     {
         return -1;
     }
+    std::cout << "market config: user_id=" << md_config["user_id"]
+              << ", client_id=" << (md_config["client_id"].empty() ? "1(default)" : md_config["client_id"])
+              << ", sock_type=" << (md_config["sock_type"].empty() ? "1(default,tcp)" : md_config["sock_type"])
+              << std::endl;
 
     market_api *market = create_market(md_config, contracts);
     if (!market)

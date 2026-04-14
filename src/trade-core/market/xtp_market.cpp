@@ -85,6 +85,7 @@ xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std:
     _user_id = config["user_id"];
     _password = config["password"];
     _client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
+    printf("xtp market client_id: %d\n", _client_id);
     std::string front = config["market_front"]; // format like "tcp://127.0.0.1:8000" or "127.0.0.1:8000"
     size_t pos = front.find("://");
     if (pos != std::string::npos)

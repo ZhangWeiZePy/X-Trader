@@ -74,6 +74,7 @@ bool realtime::init(const std::string &filename, const std::set<std::string> &co
     md_config["user_id"] = reader.Get("market", "user_id", "");
     md_config["password"] = reader.Get("market", "password", "");
     md_config["counter"] = reader.Get("market", "counter", "");
+    md_config["client_id"] = reader.Get("trader", "client_id", "");
     _market = create_market(md_config, contracts);
     if (_market == nullptr)
     {

@@ -330,6 +330,7 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     _user_id = config["user_id"];
     _password = config["password"];
     _client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
+    printf("xtp trader client_id: %d\n", _client_id);
     if (_client_id < 1 || _client_id > 99)
     {
         throw std::runtime_error("Invalid XTP client_id (must be 1~99): " + std::to_string(_client_id));
