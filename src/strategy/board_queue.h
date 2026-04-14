@@ -29,6 +29,25 @@ public:
     virtual void on_update() override;
 
 private:
+    struct Config
+    {
+        std::string contract;
+        eOrderFlag order_flag{eOrderFlag::Limit};
+        int quantity{0};
+        std::string active_start_time;
+        std::string active_end_time;
+        bool enable_queue_amount_enter{false};
+        double queue_amount_enter{0.0};
+        bool enable_queue_lots_enter{false};
+        double queue_lots_enter{0.0};
+        bool enable_queue_amount_exit{false};
+        double queue_amount_exit{0.0};
+        bool enable_queue_lots_exit{false};
+        double queue_lots_exit{0.0};
+        bool allow_reenter_after_cancel{false};
+        int max_reenter_times{0};
+    };
+
     bool in_active_window(const std::string &hhmmss) const;
 
     bool should_enter(double board_amount, double board_lots) const;
@@ -40,25 +59,10 @@ private:
     void clear_active_order(orderref_t order_ref);
 
 private:
-    std::string _contract;
-    eOrderFlag _order_flag = eOrderFlag::Limit;
-    int _quantity = 0;
-    std::string _active_start_time;
-    std::string _active_end_time;
-
-    bool _enable_queue_amount_enter = false;
-    double _queue_amount_enter = 0.0;
-    bool _enable_queue_lots_enter = false;
-    double _queue_lots_enter = 0.0;
-    bool _enable_queue_amount_exit = false;
-    double _queue_amount_exit = 0.0;
-    bool _enable_queue_lots_exit = false;
-    double _queue_lots_exit = 0.0;
+    Config _cfg{};
 
     bool _inited = false;
     bool _has_placed_once = false;
-    bool _allow_reenter_after_cancel = false;
-    int _max_reenter_times = 0;
     int _reenter_used_times = 0;
     bool _pending_reenter_after_cancel = false;
     orderref_t _active_orderref = null_orderref;

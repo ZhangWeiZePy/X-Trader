@@ -114,23 +114,23 @@ bool board_queue::set_config(const std::map<std::string, std::string> &config)
         return false;
     }
     // 注册策略关注合约
-    _contract = contract;
+    _cfg.contract = contract;
     get_contracts().clear();
-    get_contracts().insert(_contract);
+    get_contracts().insert(_cfg.contract);
     size_t key_w = 3;
     size_t val_w = 5;
-    for (const auto &kv : config)
+    for (const auto &kv: config)
     {
         key_w = std::max(key_w, kv.first.size());
         val_w = std::max(val_w, kv.second.size());
     }
     std::string sep = "+-" + std::string(key_w, '-') + "-+-" + std::string(val_w, '-') + "-+\n";
     printf("%s", sep.c_str());
-    printf("| %-*s | %-*s |\n", (int)key_w, "Key", (int)val_w, "Value");
+    printf("| %-*s | %-*s |\n", (int) key_w, "Key", (int) val_w, "Value");
     printf("%s", sep.c_str());
-    for (const auto &kv : config)
+    for (const auto &kv: config)
     {
-        printf("| %-*s | %-*s |\n", (int)key_w, kv.first.c_str(), (int)val_w, kv.second.c_str());
+        printf("| %-*s | %-*s |\n", (int) key_w, kv.first.c_str(), (int) val_w, kv.second.c_str());
     }
     printf("%s", sep.c_str());
     return true;
@@ -141,15 +141,15 @@ void board_queue::on_init()
     // 启动时统一解析并校验所有参数，失败即不激活策略
     try
     {
-        _contract = trim_copy(get_config("contract"));
+        _cfg.contract = trim_copy(get_config("contract"));
         // 解析订单类型：limit / market
         const std::string order_type = lower_copy(trim_copy(get_config("order_type")));
         if (order_type == "limit")
         {
-            _order_flag = eOrderFlag::Limit;
+            _cfg.order_flag = eOrderFlag::Limit;
         } else if (order_type == "market")
         {
-            _order_flag = eOrderFlag::Market;
+            _cfg.order_flag = eOrderFlag::Market;
         } else
         {
             printf("board_queue order_type must be limit or market\n");
@@ -157,34 +157,35 @@ void board_queue::on_init()
         }
 
         // 解析下单数量，必须大于 0
-        _quantity = std::stoi(trim_copy(get_config("quantity")));
-        if (_quantity <= 0)
+        _cfg.quantity = std::stoi(trim_copy(get_config("quantity")));
+        if (_cfg.quantity <= 0)
         {
             printf("board_queue quantity must be positive\n");
             return;
         }
 
         // 解析有效时间窗口，要求 start < end
-        _active_start_time = trim_copy(get_config("active_start_time"));
-        _active_end_time = trim_copy(get_config("active_end_time"));
-        if (!is_hhmmss(_active_start_time) || !is_hhmmss(_active_end_time) || _active_start_time >= _active_end_time)
+        _cfg.active_start_time = trim_copy(get_config("active_start_time"));
+        _cfg.active_end_time = trim_copy(get_config("active_end_time"));
+        if (!is_hhmmss(_cfg.active_start_time) || !is_hhmmss(_cfg.active_end_time) ||
+            _cfg.active_start_time >= _cfg.active_end_time)
         {
             printf("board_queue active time invalid, expected HH:MM:SS and start < end\n");
             return;
         }
 
         // 解析四个条件开关（排板金额/手数、撤单金额/手数）
-        if (!parse_bool(get_config("enable_queue_amount_enter"), _enable_queue_amount_enter) ||
-            !parse_bool(get_config("enable_queue_lots_enter"), _enable_queue_lots_enter) ||
-            !parse_bool(get_config("enable_queue_amount_exit"), _enable_queue_amount_exit) ||
-            !parse_bool(get_config("enable_queue_lots_exit"), _enable_queue_lots_exit))
+        if (!parse_bool(get_config("enable_queue_amount_enter"), _cfg.enable_queue_amount_enter) ||
+            !parse_bool(get_config("enable_queue_lots_enter"), _cfg.enable_queue_lots_enter) ||
+            !parse_bool(get_config("enable_queue_amount_exit"), _cfg.enable_queue_amount_exit) ||
+            !parse_bool(get_config("enable_queue_lots_exit"), _cfg.enable_queue_lots_exit))
         {
             printf("board_queue enable flags invalid\n");
             return;
         }
         // 解析撤单后是否允许重复下单（可选配置，默认 false）
         const std::string allow_reenter_raw = trim_copy(get_config("allow_reenter_after_cancel"));
-        if (!allow_reenter_raw.empty() && !parse_bool(allow_reenter_raw, _allow_reenter_after_cancel))
+        if (!allow_reenter_raw.empty() && !parse_bool(allow_reenter_raw, _cfg.allow_reenter_after_cancel))
         {
             printf("board_queue allow_reenter_after_cancel invalid\n");
             return;
@@ -193,8 +194,8 @@ void board_queue::on_init()
         const std::string max_reenter_raw = trim_copy(get_config("max_reenter_times"));
         if (!max_reenter_raw.empty())
         {
-            _max_reenter_times = std::stoi(max_reenter_raw);
-            if (_max_reenter_times < 0)
+            _cfg.max_reenter_times = std::stoi(max_reenter_raw);
+            if (_cfg.max_reenter_times < 0)
             {
                 printf("board_queue max_reenter_times must be >= 0\n");
                 return;
@@ -202,47 +203,47 @@ void board_queue::on_init()
         }
 
         // 若启用“金额排板”，阈值必须为正数
-        if (_enable_queue_amount_enter)
+        if (_cfg.enable_queue_amount_enter)
         {
-            _queue_amount_enter = std::stod(trim_copy(get_config("queue_amount_enter")));
-            if (_queue_amount_enter <= 0)
+            _cfg.queue_amount_enter = std::stod(trim_copy(get_config("queue_amount_enter")));
+            if (_cfg.queue_amount_enter <= 0)
             {
                 printf("board_queue queue_amount_enter must be positive\n");
                 return;
             }
         }
         // 若启用“手数排板”，阈值必须为正数
-        if (_enable_queue_lots_enter)
+        if (_cfg.enable_queue_lots_enter)
         {
-            _queue_lots_enter = std::stod(trim_copy(get_config("queue_lots_enter")));
-            if (_queue_lots_enter <= 0)
+            _cfg.queue_lots_enter = std::stod(trim_copy(get_config("queue_lots_enter")));
+            if (_cfg.queue_lots_enter <= 0)
             {
                 printf("board_queue queue_lots_enter must be positive\n");
                 return;
             }
         }
         // 至少启用一个排板条件，避免策略无法触发
-        if (!_enable_queue_amount_enter && !_enable_queue_lots_enter)
+        if (!_cfg.enable_queue_amount_enter && !_cfg.enable_queue_lots_enter)
         {
             printf("board_queue at least one enter condition must be enabled\n");
             return;
         }
 
         // 若启用“金额撤单”，阈值必须为正数
-        if (_enable_queue_amount_exit)
+        if (_cfg.enable_queue_amount_exit)
         {
-            _queue_amount_exit = std::stod(trim_copy(get_config("queue_amount_exit")));
-            if (_queue_amount_exit <= 0)
+            _cfg.queue_amount_exit = std::stod(trim_copy(get_config("queue_amount_exit")));
+            if (_cfg.queue_amount_exit <= 0)
             {
                 printf("board_queue queue_amount_exit must be positive\n");
                 return;
             }
         }
         // 若启用“手数撤单”，阈值必须为正数
-        if (_enable_queue_lots_exit)
+        if (_cfg.enable_queue_lots_exit)
         {
-            _queue_lots_exit = std::stod(trim_copy(get_config("queue_lots_exit")));
-            if (_queue_lots_exit <= 0)
+            _cfg.queue_lots_exit = std::stod(trim_copy(get_config("queue_lots_exit")));
+            if (_cfg.queue_lots_exit <= 0)
             {
                 printf("board_queue queue_lots_exit must be positive\n");
                 return;
@@ -261,7 +262,7 @@ void board_queue::on_init()
 bool board_queue::in_active_window(const std::string &hhmmss) const
 {
     // 仅在配置时间窗内允许触发和维持挂单
-    return hhmmss >= _active_start_time && hhmmss <= _active_end_time;
+    return hhmmss >= _cfg.active_start_time && hhmmss <= _cfg.active_end_time;
 }
 
 inline bool board_queue::should_enter(double board_amount, double board_lots) const
@@ -269,13 +270,13 @@ inline bool board_queue::should_enter(double board_amount, double board_lots) co
     // 排板条件为“任一满足即可”
     bool by_amount = false;
     bool by_lots = false;
-    if (_enable_queue_amount_enter)
+    if (_cfg.enable_queue_amount_enter)
     {
-        by_amount = board_amount >= _queue_amount_enter;
+        by_amount = board_amount >= _cfg.queue_amount_enter;
     }
-    if (_enable_queue_lots_enter)
+    if (_cfg.enable_queue_lots_enter)
     {
-        by_lots = board_lots >= _queue_lots_enter;
+        by_lots = board_lots >= _cfg.queue_lots_enter;
     }
     return by_amount || by_lots;
 }
@@ -285,13 +286,13 @@ inline bool board_queue::should_exit(double board_amount, double board_lots) con
     // 撤单条件为“任一满足即撤”
     bool by_amount = false;
     bool by_lots = false;
-    if (_enable_queue_amount_exit)
+    if (_cfg.enable_queue_amount_exit)
     {
-        by_amount = board_amount < _queue_amount_exit;
+        by_amount = board_amount < _cfg.queue_amount_exit;
     }
-    if (_enable_queue_lots_exit)
+    if (_cfg.enable_queue_lots_exit)
     {
-        by_lots = board_lots < _queue_lots_exit;
+        by_lots = board_lots < _cfg.queue_lots_exit;
     }
     return by_amount || by_lots;
 }
@@ -310,7 +311,8 @@ static std::string hhmmss_from_data_time(const int64_t data_time)
     return std::string(buf);
 }
 
-inline bool board_queue::compute_board_metrics(const OrderBookData &tick, double &board_amount, double &board_lots) const
+inline bool board_queue::compute_board_metrics(const OrderBookData &tick, double &board_amount,
+                                               double &board_lots) const
 {
     // 取买一价量作为封板口径
     const double bid1_price = tick.bid[0];
@@ -336,7 +338,7 @@ void board_queue::on_tick(const OrderBookData &tick)
         return;
     }
     // 仅处理目标合约行情
-    if (unlikely(_contract != tick.instrument_id))
+    if (unlikely(_cfg.contract != tick.instrument_id))
     {
         return;
     }
@@ -354,7 +356,7 @@ void board_queue::on_tick(const OrderBookData &tick)
         _latest_board_lots = 0.0;
     }
     printf("board_queue latest tick time: %s, board amount: %.2f, board lots: %.2f, active order ref: %lld\n",
-        _latest_tick_time.c_str(), _latest_board_amount, _latest_board_lots, _active_orderref);
+           _latest_tick_time.c_str(), _latest_board_amount, _latest_board_lots, _active_orderref);
     // 有活动单时不重复下单
     if (_active_orderref != null_orderref)
     {
@@ -365,7 +367,7 @@ void board_queue::on_tick(const OrderBookData &tick)
     // 2) 若启用撤单后重下，只在“收到撤单回报后”且未超次数时允许再次下单。
     if (_has_placed_once)
     {
-        if (!_allow_reenter_after_cancel)
+        if (!_cfg.allow_reenter_after_cancel)
         {
             return;
         }
@@ -373,7 +375,7 @@ void board_queue::on_tick(const OrderBookData &tick)
         {
             return;
         }
-        if (_reenter_used_times >= _max_reenter_times)
+        if (_reenter_used_times >= _cfg.max_reenter_times)
         {
             return;
         }
@@ -392,7 +394,7 @@ void board_queue::on_tick(const OrderBookData &tick)
     // 限价单按涨停价；市价单使用买一价作为传参价格
     const double order_price = tick.bid[0];
     // 发起买入开仓排板
-    const orderref_t order_ref = buy_open(_order_flag, _contract, order_price, _quantity);
+    const orderref_t order_ref = buy_open(_cfg.order_flag, _cfg.contract, order_price, _cfg.quantity);
     if (order_ref != null_orderref)
     {
         // 记录活动订单，并锁定“首单已使用”
@@ -459,7 +461,7 @@ void board_queue::on_cancel(const Order &order)
     // 撤单通知：清理活动单引用
     clear_active_order(order.order_ref);
     // 仅在开启配置时允许“撤单后重下”
-    if (_allow_reenter_after_cancel)
+    if (_cfg.allow_reenter_after_cancel)
     {
         _pending_reenter_after_cancel = true;
     }
