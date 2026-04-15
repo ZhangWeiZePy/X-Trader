@@ -12,13 +12,6 @@
 class xtp_market : public market_api, public XTP::API::QuoteSpi
 {
 public:
-    xtp_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts);
-
-    virtual ~xtp_market();
-
-    virtual void release() override;
-
-private:
     struct config_market_xtp
     {
         std::string server_ip;
@@ -30,6 +23,14 @@ private:
         NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_market_xtp, server_ip, server_port, user_id, password, client_id,
                                        protocol_type)
     };
+
+    xtp_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts);
+
+    virtual ~xtp_market();
+
+    virtual void release() override;
+
+private:
 
     static constexpr uint8_t kBookUpdateNone = 0;
     static constexpr uint8_t kBookUpdateBid = 1 << 0;

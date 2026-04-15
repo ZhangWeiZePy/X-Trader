@@ -5,6 +5,26 @@
 class board_queue : public strategy
 {
 public:
+    struct config_strategy_board_queue
+    {
+        std::string contract;
+        eOrderFlag order_flag{eOrderFlag::Limit};
+        int quantity{0};
+        std::string active_start_time;
+        std::string active_end_time;
+        bool enable_queue_amount_enter{false};
+        double queue_amount_enter{0.0};
+        bool enable_queue_lots_enter{false};
+        double queue_lots_enter{0.0};
+        bool enable_queue_amount_exit{false};
+        double queue_amount_exit{0.0};
+        bool enable_queue_lots_exit{false};
+        double queue_lots_exit{0.0};
+        bool allow_reenter_after_cancel{false};
+        int max_reenter_times{0};
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_strategy_board_queue, contract, order_flag, quantity, active_start_time, active_end_time, enable_queue_amount_enter, queue_amount_enter, enable_queue_lots_enter, queue_lots_enter, enable_queue_amount_exit, queue_amount_exit, enable_queue_lots_exit, queue_lots_exit, allow_reenter_after_cancel, max_reenter_times)
+    };
+
     board_queue(stratid_t id, frame &frame) :
         strategy(id, frame)
     {}
@@ -29,25 +49,6 @@ public:
     virtual void on_update() override;
 
 private:
-    struct Config
-    {
-        std::string contract;
-        eOrderFlag order_flag{eOrderFlag::Limit};
-        int quantity{0};
-        std::string active_start_time;
-        std::string active_end_time;
-        bool enable_queue_amount_enter{false};
-        double queue_amount_enter{0.0};
-        bool enable_queue_lots_enter{false};
-        double queue_lots_enter{0.0};
-        bool enable_queue_amount_exit{false};
-        double queue_amount_exit{0.0};
-        bool enable_queue_lots_exit{false};
-        double queue_lots_exit{0.0};
-        bool allow_reenter_after_cancel{false};
-        int max_reenter_times{0};
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(Config, contract, order_flag, quantity, active_start_time, active_end_time, enable_queue_amount_enter, queue_amount_enter, enable_queue_lots_enter, queue_lots_enter, enable_queue_amount_exit, queue_amount_exit, enable_queue_lots_exit, queue_lots_exit, allow_reenter_after_cancel, max_reenter_times)
-    };
 
     bool in_active_window(const std::string &hhmmss) const;
 

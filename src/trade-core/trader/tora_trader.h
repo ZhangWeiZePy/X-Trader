@@ -11,6 +11,18 @@
 class tora_trader : public trader_api, public TORASTOCKAPI::CTORATstpTraderSpi
 {
 public:
+    struct config_trader_tora
+    {
+        std::string user_id;
+        std::string password;
+        std::string front_addr;
+        std::string department_id;
+        std::string shareholder_id_sh;
+        std::string shareholder_id_sz;
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_tora, user_id, password, front_addr, department_id,
+                                       shareholder_id_sh, shareholder_id_sz)
+    };
+
     tora_trader(std::map<std::string, std::string> &config, std::set<std::string> &contracts);
 
     virtual ~tora_trader();
@@ -47,17 +59,6 @@ public:
     virtual void OnRspQryTradingAccount(TORASTOCKAPI::CTORATstpTradingAccountField *pTradingAccountField, TORASTOCKAPI::CTORATstpRspInfoField *pRspInfoField, int nRequestID, bool bIsLast) override;
 
 private:
-    struct config_trader_tora
-    {
-        std::string user_id;
-        std::string password;
-        std::string front_addr;
-        std::string department_id;
-        std::string shareholder_id_sh;
-        std::string shareholder_id_sz;
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_tora, user_id, password, front_addr, department_id,
-                                       shareholder_id_sh, shareholder_id_sz)
-    };
 
     void req_qry_position();
 
