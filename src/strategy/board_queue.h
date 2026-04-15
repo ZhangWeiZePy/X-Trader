@@ -22,7 +22,6 @@ public:
         double queue_lots_exit{0.0};
         bool allow_reenter_after_cancel{false};
         int max_reenter_times{0};
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_strategy_board_queue, contract, order_flag, quantity, active_start_time, active_end_time, enable_queue_amount_enter, queue_amount_enter, enable_queue_lots_enter, queue_lots_enter, enable_queue_amount_exit, queue_amount_exit, enable_queue_lots_exit, queue_lots_exit, allow_reenter_after_cancel, max_reenter_times)
     };
 
     board_queue(stratid_t id, frame &frame) :

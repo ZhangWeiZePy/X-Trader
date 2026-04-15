@@ -19,7 +19,6 @@ public:
         std::string password;
         int client_id{1};
         XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_xtp, server_ip, server_port, user_id, password, client_id, protocol_type)
     };
 
     /// @brief 构造函数，初始化并连接 XTP 交易接口

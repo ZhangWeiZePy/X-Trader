@@ -20,8 +20,6 @@ public:
         std::string password;
         int client_id{1};
         XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_market_xtp, server_ip, server_port, user_id, password, client_id,
-                                       protocol_type)
     };
 
     xtp_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts);

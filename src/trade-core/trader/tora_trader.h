@@ -19,8 +19,6 @@ public:
         std::string department_id;
         std::string shareholder_id_sh;
         std::string shareholder_id_sz;
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_tora, user_id, password, front_addr, department_id,
-                                       shareholder_id_sh, shareholder_id_sz)
     };
 
     tora_trader(std::map<std::string, std::string> &config, std::set<std::string> &contracts);

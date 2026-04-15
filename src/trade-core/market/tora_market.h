@@ -16,7 +16,6 @@ public:
         std::string user_id;
         std::string password;
         std::string front_addr;
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_market_tora, user_id, password, front_addr)
     };
     tora_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts);
     virtual ~tora_market();
