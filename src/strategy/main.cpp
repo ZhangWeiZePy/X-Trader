@@ -5,13 +5,11 @@
 void start_running(const char *filename)
 {
     frame run(filename);
-    auto strat = create_strategy_from_ini(filename, run);
-    if (!strat)
+    auto strategys = create_strategies_from_ini(filename, run);
+    if (strategys.empty())
     {
         return;
     }
-    std::vector<std::shared_ptr<strategy> > strategys;
-    strategys.emplace_back(strat);
     run.run_until_close(strategys);
 }
 
