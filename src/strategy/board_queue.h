@@ -61,7 +61,7 @@ private:
     void clear_active_order(orderref_t order_ref);
 
 private:
-    Config _cfg{};
+    config_strategy_board_queue _cfg{};
 
     bool _inited = false;
     bool _has_placed_once = false;
