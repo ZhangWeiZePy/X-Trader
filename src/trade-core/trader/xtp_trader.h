@@ -8,16 +8,6 @@
 #include <string>
 #include <vector>
 
-struct config_trader_xtp
-{
-    std::string server_ip;
-    int server_port{0};
-    std::string user_id;
-    std::string password;
-    int client_id{1};
-    XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
-};
-
 class xtp_trader : public trader_api, public XTP::API::TraderSpi
 {
 public:
@@ -119,7 +109,16 @@ public:
                                 uint64_t session_id) override;
 
 private:
-
+    struct config_trader_xtp
+    {
+        std::string server_ip;
+        int server_port{0};
+        std::string user_id;
+        std::string password;
+        int client_id{1};
+        XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_xtp, server_ip, server_port, user_id, password, client_id, protocol_type)
+    };
 
     /// @brief 内部调用，主动请求查询持仓
     void req_qry_position();

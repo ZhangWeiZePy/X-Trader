@@ -2,6 +2,7 @@
 
 #include "event_center.hpp"
 #include "data_struct.h"
+#include "json.hpp"
 
 class market_api : public event_ringbuffer<OrderBookData>
 {

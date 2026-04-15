@@ -8,16 +8,6 @@
 #include <string>
 #include <vector>
 
-struct config_trader_tora
-{
-    std::string user_id;
-    std::string password;
-    std::string front_addr;
-    std::string department_id;
-    std::string shareholder_id_sh;
-    std::string shareholder_id_sz;
-};
-
 class tora_trader : public trader_api, public TORASTOCKAPI::CTORATstpTraderSpi
 {
 public:
@@ -57,7 +47,20 @@ public:
     virtual void OnRspQryTradingAccount(TORASTOCKAPI::CTORATstpTradingAccountField *pTradingAccountField, TORASTOCKAPI::CTORATstpRspInfoField *pRspInfoField, int nRequestID, bool bIsLast) override;
 
 private:
+    struct config_trader_tora
+    {
+        std::string user_id;
+        std::string password;
+        std::string front_addr;
+        std::string department_id;
+        std::string shareholder_id_sh;
+        std::string shareholder_id_sz;
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_trader_tora, user_id, password, front_addr, department_id,
+                                       shareholder_id_sh, shareholder_id_sz)
+    };
+
     void req_qry_position();
+
     void req_qry_order();
 
 private:

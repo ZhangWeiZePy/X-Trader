@@ -8,13 +8,6 @@
 #include <string>
 #include <unordered_map>
 
-struct config_market_tora
-{
-    std::string user_id;
-    std::string password;
-    std::string front_addr;
-};
-
 class tora_market : public market_api, public TORALEV2API::CTORATstpLev2MdSpi
 {
 public:
@@ -23,7 +16,13 @@ public:
     virtual void release() override;
 
 private:
-
+    struct config_market_tora
+    {
+        std::string user_id;
+        std::string password;
+        std::string front_addr;
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_market_tora, user_id, password, front_addr)
+    };
 
     void subscribe();
 
