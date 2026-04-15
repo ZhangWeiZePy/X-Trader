@@ -8,6 +8,13 @@
 #include <string>
 #include <unordered_map>
 
+struct config_market_tora
+{
+    std::string user_id;
+    std::string password;
+    std::string front_addr;
+};
+
 class tora_market : public market_api, public TORALEV2API::CTORATstpLev2MdSpi
 {
 public:
@@ -16,12 +23,7 @@ public:
     virtual void release() override;
 
 private:
-    struct Config
-    {
-        std::string user_id;
-        std::string password;
-        std::string front_addr;
-    };
+
 
     void subscribe();
 
@@ -36,7 +38,7 @@ public:
 private:
     TORALEV2API::CTORATstpLev2MdApi *_md_api;
     DynLibLoader _loader;
-    Config _cfg{};
+    config_market_tora _cfg{};
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, TORALEV2API::CTORATstpLev2MarketDataField> _previous_tick_map{};

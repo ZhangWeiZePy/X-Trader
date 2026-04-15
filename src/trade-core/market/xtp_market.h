@@ -9,6 +9,16 @@
 #include <unordered_map>
 #include <functional>
 
+struct config_market_xtp
+{
+    std::string server_ip;
+    int server_port{0};
+    std::string user_id;
+    std::string password;
+    int client_id{1};
+    XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
+};
+
 class xtp_market : public market_api, public XTP::API::QuoteSpi
 {
 public:
@@ -19,16 +29,6 @@ public:
     virtual void release() override;
 
 private:
-    struct Config
-    {
-        std::string server_ip;
-        int server_port{0};
-        std::string user_id;
-        std::string password;
-        int client_id{1};
-        XTP_PROTOCOL_TYPE protocol_type{XTP_PROTOCOL_TCP};
-    };
-
     static constexpr uint8_t kBookUpdateNone = 0;
     static constexpr uint8_t kBookUpdateBid = 1 << 0;
     static constexpr uint8_t kBookUpdateAsk = 1 << 1;
@@ -106,7 +106,7 @@ public:
 private:
     XTP::API::QuoteApi *_md_api;
     DynLibLoader _loader;
-    Config _cfg{};
+    config_market_xtp _cfg{};
 
     std::set<std::string> _contracts;
     std::unordered_map<std::string, XTPMD> _previous_tick_map{};
