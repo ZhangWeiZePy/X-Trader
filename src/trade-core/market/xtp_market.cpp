@@ -1,8 +1,8 @@
 #include "xtp_market.h"
 #include <algorithm>
-#include <iostream>
 #include <filesystem>
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -85,7 +85,7 @@ xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std:
     _cfg.user_id = config["user_id"];
     _cfg.password = config["password"];
     _cfg.client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
-    printf("xtp market client_id: %d\n", _cfg.client_id);
+    spdlog::info("xtp market client_id: {}", _cfg.client_id);
     std::string front = config["market_front"]; // format like "tcp://127.0.0.1:8000" or "127.0.0.1:8000"
     size_t pos = front.find("://");
     if (pos != std::string::npos)
@@ -127,10 +127,10 @@ xtp_market::xtp_market(std::map<std::string, std::string> &config, std::set<std:
     if (ret != 0)
     {
         XTPRI *error_info = _md_api->GetApiLastError();
-        std::cout << "xtp md login error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+        spdlog::error("xtp md login error: {}", (error_info ? error_info->error_msg : "unknown"));
     } else
     {
-        std::cout << "xtp md login success!" << std::endl;
+        spdlog::info("xtp md login success!");
         _is_ready.store(true, std::memory_order_release);
         subscribe();
     }
@@ -588,7 +588,7 @@ bool xtp_market::check_and_update_seq(LocalBookState &book, int32_t channel_no, 
 
 void xtp_market::OnDisconnected(int reason)
 {
-    std::cout << "xtp md disconnected, reason=" << reason << std::endl;
+    spdlog::warn("xtp md disconnected, reason={}", reason);
     _is_ready.store(false);
 }
 
@@ -596,7 +596,7 @@ void xtp_market::OnError(XTPRI *error_info)
 {
     if (error_info && error_info->error_id != 0)
     {
-        std::cout << "xtp md error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp md error: {}", error_info->error_msg);
     }
 }
 
@@ -604,7 +604,7 @@ void xtp_market::OnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last)
 {
     if (error_info && error_info->error_id != 0)
     {
-        std::cout << "xtp sub market data error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp sub market data error: {}", error_info->error_msg);
     }
 }
 
@@ -638,7 +638,7 @@ void xtp_market::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
     // 逐笔订阅失败时输出错误信息
     if (error_info && error_info->error_id != 0)
     {
-        std::cout << "xtp sub tick by tick error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp sub tick by tick error: {}", error_info->error_msg);
     }
 }
 

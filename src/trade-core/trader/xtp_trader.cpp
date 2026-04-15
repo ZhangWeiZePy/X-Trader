@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
 
@@ -330,7 +330,7 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     _cfg.user_id = config["user_id"];
     _cfg.password = config["password"];
     _cfg.client_id = config.count("client_id") ? std::stoi(config["client_id"]) : 1;
-    printf("xtp trader client_id: %d\n", _cfg.client_id);
+    spdlog::info("xtp trader client_id: {}", _cfg.client_id);
     if (_cfg.client_id < 1 || _cfg.client_id > 99)
     {
         throw std::runtime_error("Invalid XTP client_id (must be 1~99): " + std::to_string(_cfg.client_id));
@@ -401,10 +401,10 @@ xtp_trader::xtp_trader(std::map<std::string, std::string> &config, std::set<std:
     if (_session_id == 0)
     {
         XTPRI *error_info = _td_api->GetApiLastError();
-        std::cout << "xtp td login error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+        spdlog::error("xtp td login error: {}", (error_info ? error_info->error_msg : "unknown"));
     } else
     {
-        std::cout << "xtp td login success! session_id=" << _session_id << std::endl;
+        spdlog::info("xtp td login success! session_id={}", _session_id);
         _trading_day = _td_api->GetTradingDay();
         _is_ready.store(true, std::memory_order_release);
         req_qry_position();
@@ -446,7 +446,7 @@ void xtp_trader::get_account()
         if (ret != 0)
         {
             auto *error_info = _td_api->GetApiLastError();
-            std::cout << "xtp account query error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+            spdlog::error("xtp account query error: {}", (error_info ? error_info->error_msg : "unknown"));
         }
     }
 }
@@ -479,7 +479,7 @@ orderref_t xtp_trader::insert_order(eOrderFlag order_flag, const std::string &co
     if (xtp_id == 0)
     {
         auto *error_info = _td_api->GetApiLastError();
-        std::cout << "xtp td insert order error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+        spdlog::error("xtp td insert order error: {}", (error_info ? error_info->error_msg : "unknown"));
         return null_orderref;
     }
     Order o{};
@@ -508,26 +508,26 @@ bool xtp_trader::cancel_order(const orderref_t order_ref)
     const auto it = _order_map.find(order_ref);
     if (it == _order_map.end())
     {
-        std::cout << "xtp cancel order failed: cannot find order_ref " << order_ref << std::endl;
+        spdlog::warn("xtp cancel order failed: cannot find order_ref {}", order_ref);
         return false;
     }
     auto &order = it->second;
     if (order.order_sys_id[0] == '\0')
     {
-        std::cout << "xtp cancel order failed: order_sys_id is empty." << std::endl;
+        spdlog::warn("xtp cancel order failed: order_sys_id is empty.");
         return false;
     }
     const uint64_t order_xtp_id = std::strtoull(order.order_sys_id, nullptr, 10);
     if (order_xtp_id == 0)
     {
-        std::cout << "xtp cancel order failed: invalid order_xtp_id." << std::endl;
+        spdlog::warn("xtp cancel order failed: invalid order_xtp_id.");
         return false;
     }
     const uint64_t cancel_id = _td_api->CancelOrder(order_xtp_id, _session_id);
     if (cancel_id == 0)
     {
         auto *error_info = _td_api->GetApiLastError();
-        std::cout << "xtp td cancel order error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+        spdlog::error("xtp td cancel order error: {}", (error_info ? error_info->error_msg : "unknown"));
         return false;
     }
     return true;
@@ -541,8 +541,7 @@ void xtp_trader::req_qry_position()
         if (ret != 0)
         {
             auto *error_info = _td_api->GetApiLastError();
-            std::cout << "xtp position query error: " << (error_info ? error_info->error_msg : "unknown") <<
-                    std::endl;
+            spdlog::error("xtp position query error: {}", (error_info ? error_info->error_msg : "unknown"));
         }
     }
 }
@@ -556,14 +555,14 @@ void xtp_trader::req_qry_order()
         if (ret != 0)
         {
             auto *error_info = _td_api->GetApiLastError();
-            std::cout << "xtp order query error: " << (error_info ? error_info->error_msg : "unknown") << std::endl;
+            spdlog::error("xtp order query error: {}", (error_info ? error_info->error_msg : "unknown"));
         }
     }
 }
 
 void xtp_trader::OnDisconnected(uint64_t session_id, int reason)
 {
-    std::cout << "xtp td disconnected, reason=" << reason << std::endl;
+    spdlog::warn("xtp td disconnected, reason={}", reason);
     _is_ready.store(false);
 }
 
@@ -571,7 +570,7 @@ void xtp_trader::OnError(XTPRI *error_info)
 {
     if (error_info && error_info->error_id != 0)
     {
-        std::cout << "xtp td error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp td error: {}", error_info->error_msg);
     }
 }
 
@@ -693,7 +692,7 @@ void xtp_trader::OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *error_
 {
     if (has_error(error_info))
     {
-        std::cout << "xtp position query callback error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp position query callback error: {}", error_info->error_msg);
         return;
     }
 
@@ -731,7 +730,7 @@ void xtp_trader::OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, int re
 {
     if (has_error(error_info))
     {
-        std::cout << "xtp asset query callback error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp asset query callback error: {}", error_info->error_msg);
     }
 }
 
@@ -740,7 +739,7 @@ void xtp_trader::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, i
 {
     if (has_error(error_info))
     {
-        std::cout << "xtp order query callback error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp order query callback error: {}", error_info->error_msg);
         return;
     }
 
@@ -759,7 +758,7 @@ void xtp_trader::OnQueryOrderEx(XTPOrderInfoEx *order_info, XTPRI *error_info, i
 {
     if (has_error(error_info))
     {
-        std::cout << "xtp order query callback error: " << error_info->error_msg << std::endl;
+        spdlog::error("xtp order query callback error: {}", error_info->error_msg);
         return;
     }
 

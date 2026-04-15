@@ -1,6 +1,6 @@
 #include "frame.h"
 #include "strategy_loader.h"
-#include <cstdio>
+#include <spdlog/spdlog.h>
 
 void start_running(const char *filename)
 {
@@ -16,9 +16,15 @@ void start_running(const char *filename)
 
 int main(int argc, char **argv)
 {
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%!] %v");
+#ifndef NDEBUG
+    spdlog::set_level(spdlog::level::debug);
+#else
+    spdlog::set_level(spdlog::level::info);
+#endif
     if (argc < 2)
     {
-        printf("usage: femtotrader <ini_path>\n");
+        spdlog::error("usage: femtotrader <ini_path>");
         return 1;
     }
     start_running(argv[1]);

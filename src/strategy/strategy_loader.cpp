@@ -1,11 +1,11 @@
 #include "strategy_loader.h"
 
-#include <cstdio>
 #include <filesystem>
 #include <limits>
 #include <map>
 #include <set>
 #include <sstream>
+#include <spdlog/spdlog.h>
 
 #include "frame.h"
 #include "INIReader.h"
@@ -50,21 +50,21 @@ std::vector<std::shared_ptr<strategy> > create_strategies_from_ini(const std::st
     std::vector<std::shared_ptr<strategy> > strategies;
     if (!std::filesystem::exists(ini_path))
     {
-        printf("strategy config file not found: %s\n", ini_path.c_str());
+        spdlog::error("strategy config file not found: {}", ini_path);
         return {};
     }
 
     INIReader reader(ini_path);
     if (reader.ParseError() < 0)
     {
-        printf("can't load %s\n", ini_path.c_str());
+        spdlog::error("can't load {}", ini_path);
         return {};
     }
 
     const std::string strategy_list = reader.Get("strategy", "list", "");
     if (strategy_list.empty())
     {
-        printf("strategy.list is required\n");
+        spdlog::error("strategy.list is required");
         return {};
     }
 
@@ -77,12 +77,12 @@ std::vector<std::shared_ptr<strategy> > create_strategies_from_ini(const std::st
         const std::string alias_trimmed = trim_copy(alias);
         if (alias_trimmed.empty())
         {
-            printf("strategy.list contains empty alias\n");
+            spdlog::error("strategy.list contains empty alias");
             return {};
         }
         if (!alias_set.insert(alias_trimmed).second)
         {
-            printf("duplicate strategy alias in strategy.list: %s\n", alias_trimmed.c_str());
+            spdlog::error("duplicate strategy alias in strategy.list: {}", alias_trimmed);
             return {};
         }
 
@@ -92,23 +92,22 @@ std::vector<std::shared_ptr<strategy> > create_strategies_from_ini(const std::st
 
         if (strategy_name.empty())
         {
-            printf("%s.name is required\n", common_section.c_str());
+            spdlog::error("{}.name is required", common_section);
             return {};
         }
         if (strategy_id <= 0)
         {
-            printf("%s.id must be positive\n", common_section.c_str());
+            spdlog::error("{}.id must be positive", common_section);
             return {};
         }
         if (strategy_id > std::numeric_limits<stratid_t>::max())
         {
-            printf("%s.id exceeds max allowed value: %lld\n", common_section.c_str(),
-                   static_cast<long long>(strategy_id));
+            spdlog::error("{}.id exceeds max allowed value: {}", common_section, strategy_id);
             return {};
         }
         if (!id_set.insert(strategy_id).second)
         {
-            printf("duplicate strategy id: %lld\n", static_cast<long long>(strategy_id));
+            spdlog::error("duplicate strategy id: {}", strategy_id);
             return {};
         }
 
@@ -122,13 +121,13 @@ std::vector<std::shared_ptr<strategy> > create_strategies_from_ini(const std::st
             load_board_queue_config(reader, config_section, config);
         } else
         {
-            printf("unsupported %s.name: %s\n", common_section.c_str(), strategy_name.c_str());
+            spdlog::error("unsupported {}.name: {}", common_section, strategy_name);
             return {};
         }
 
         if (!strat->set_config(config))
         {
-            printf("invalid strategy config in section: %s\n", config_section.c_str());
+            spdlog::error("invalid strategy config in section: {}", config_section);
             return {};
         }
         strategies.emplace_back(strat);
@@ -136,7 +135,7 @@ std::vector<std::shared_ptr<strategy> > create_strategies_from_ini(const std::st
 
     if (strategies.empty())
     {
-        printf("strategy.list is empty\n");
+        spdlog::error("strategy.list is empty");
         return {};
     }
 

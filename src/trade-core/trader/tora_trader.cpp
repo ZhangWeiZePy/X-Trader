@@ -1,8 +1,7 @@
 #include "tora_trader.h"
-#include <iostream>
 #include <filesystem>
 #include <cstring>
-#include <chrono>
+#include <spdlog/spdlog.h>
 
 static inline void to_tora_dirOffset(eDirOffset dir_offset, TORASTOCKAPI::CTORATstpInputOrderField &t) {
     switch (dir_offset) {
@@ -198,7 +197,7 @@ void tora_trader::req_qry_order() {
 }
 
 void tora_trader::OnFrontConnected() {
-    std::cout << "tora td front connected" << std::endl;
+    spdlog::info("tora td front connected");
     TORASTOCKAPI::CTORATstpReqUserLoginField req{};
     strcpy(req.LogInAccount, _cfg.user_id.c_str());
     req.LogInAccountType = TORASTOCKAPI::TORA_TSTP_LACT_UserID;
@@ -210,16 +209,16 @@ void tora_trader::OnFrontConnected() {
 }
 
 void tora_trader::OnFrontDisconnected(int nReason) {
-    std::cout << "tora td disconnected, reason=" << nReason << std::endl;
+    spdlog::warn("tora td disconnected, reason={}", nReason);
     _is_ready.store(false);
 }
 
 void tora_trader::OnRspUserLogin(TORASTOCKAPI::CTORATstpRspUserLoginField *pRspUserLoginField,
                                  TORASTOCKAPI::CTORATstpRspInfoField *pRspInfoField, int nRequestID) {
     if (pRspInfoField && pRspInfoField->ErrorID != 0) {
-        std::cout << "tora td login error: " << pRspInfoField->ErrorMsg << std::endl;
+        spdlog::error("tora td login error: {}", pRspInfoField->ErrorMsg);
     } else {
-        std::cout << "tora td login success!" << std::endl;
+        spdlog::info("tora td login success!");
         if (pRspUserLoginField) {
             _session_id = pRspUserLoginField->SessionID;
         }

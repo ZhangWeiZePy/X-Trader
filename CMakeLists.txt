@@ -2,11 +2,29 @@ cmake_minimum_required(VERSION 3.18)
 
 project(x-trader)
 
+include(FetchContent)
+
 if (UNIX)
 	add_compile_options(-fPIC)
 endif ()
 
 set(CMAKE_CXX_STANDARD 20)
+
+find_package(spdlog CONFIG QUIET)
+
+if (TARGET spdlog::spdlog_header_only)
+	set(SPDLOG_TARGET spdlog::spdlog_header_only)
+elseif (TARGET spdlog::spdlog)
+	set(SPDLOG_TARGET spdlog::spdlog)
+else ()
+	message(FATAL_ERROR "spdlog target not found")
+endif ()
+
+# Debug 编译打开 debug 日志，其他编译等级默认裁剪到 info 及以上
+add_compile_definitions(
+	$<$<CONFIG:Debug>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG>
+	$<$<NOT:$<CONFIG:Debug>>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO>
+)
 
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

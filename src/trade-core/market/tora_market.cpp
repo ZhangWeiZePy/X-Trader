@@ -1,7 +1,7 @@
 #include "tora_market.h"
-#include <iostream>
 #include <filesystem>
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 tora_market::tora_market(std::map<std::string, std::string> &config, std::set<std::string> &contracts) :
     _contracts(contracts), _md_api(nullptr)
@@ -124,7 +124,7 @@ void tora_market::subscribe()
 
 void tora_market::OnFrontConnected()
 {
-    std::cout << "tora md front connected" << std::endl;
+    spdlog::info("tora md front connected");
     TORALEV2API::CTORATstpReqUserLoginField req{};
     strcpy(req.LogInAccount, _cfg.user_id.c_str());
     req.LogInAccountType = TORALEV2API::TORA_TSTP_LACT_UserID;
@@ -134,7 +134,7 @@ void tora_market::OnFrontConnected()
 
 void tora_market::OnFrontDisconnected(int nReason)
 {
-    std::cout << "tora md disconnected, reason=" << nReason << std::endl;
+    spdlog::warn("tora md disconnected, reason={}", nReason);
     _is_ready.store(false);
 }
 
@@ -142,10 +142,10 @@ void tora_market::OnRspUserLogin(TORALEV2API::CTORATstpRspUserLoginField *pRspUs
 {
     if (pRspInfo && pRspInfo->ErrorID != 0)
     {
-        std::cout << "tora md login error: " << pRspInfo->ErrorMsg << std::endl;
+        spdlog::error("tora md login error: {}", pRspInfo->ErrorMsg);
     } else
     {
-        std::cout << "tora md login success!" << std::endl;
+        spdlog::info("tora md login success!");
         _is_ready.store(true, std::memory_order_release);
         subscribe();
     }

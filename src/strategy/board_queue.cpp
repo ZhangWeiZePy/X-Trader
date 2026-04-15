@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -110,7 +111,7 @@ bool board_queue::set_config(const std::map<std::string, std::string> &config)
     const auto &contract = get_config("contract");
     if (contract.empty())
     {
-        printf("board_queue config missing contract\n");
+        spdlog::error("board_queue config missing contract");
         return false;
     }
     // 注册策略关注合约
@@ -124,15 +125,15 @@ bool board_queue::set_config(const std::map<std::string, std::string> &config)
         key_w = std::max(key_w, kv.first.size());
         val_w = std::max(val_w, kv.second.size());
     }
-    std::string sep = "+-" + std::string(key_w, '-') + "-+-" + std::string(val_w, '-') + "-+\n";
-    printf("%s", sep.c_str());
-    printf("| %-*s | %-*s |\n", (int) key_w, "Key", (int) val_w, "Value");
-    printf("%s", sep.c_str());
+    std::string sep = "+-" + std::string(key_w, '-') + "-+-" + std::string(val_w, '-') + "-+";
+    spdlog::info("{}", sep);
+    spdlog::info("| {:<{}} | {:<{}} |", "Key", key_w, "Value", val_w);
+    spdlog::info("{}", sep);
     for (const auto &kv: config)
     {
-        printf("| %-*s | %-*s |\n", (int) key_w, kv.first.c_str(), (int) val_w, kv.second.c_str());
+        spdlog::info("| {:<{}} | {:<{}} |", kv.first, key_w, kv.second, val_w);
     }
-    printf("%s", sep.c_str());
+    spdlog::info("{}", sep);
     return true;
 }
 
@@ -152,7 +153,7 @@ void board_queue::on_init()
             _cfg.order_flag = eOrderFlag::Market;
         } else
         {
-            printf("board_queue order_type must be limit or market\n");
+            spdlog::error("board_queue order_type must be limit or market");
             return;
         }
 
@@ -160,7 +161,7 @@ void board_queue::on_init()
         _cfg.quantity = std::stoi(trim_copy(get_config("quantity")));
         if (_cfg.quantity <= 0)
         {
-            printf("board_queue quantity must be positive\n");
+            spdlog::error("board_queue quantity must be positive");
             return;
         }
 
@@ -170,7 +171,7 @@ void board_queue::on_init()
         if (!is_hhmmss(_cfg.active_start_time) || !is_hhmmss(_cfg.active_end_time) ||
             _cfg.active_start_time >= _cfg.active_end_time)
         {
-            printf("board_queue active time invalid, expected HH:MM:SS and start < end\n");
+            spdlog::error("board_queue active time invalid, expected HH:MM:SS and start < end");
             return;
         }
 
@@ -180,14 +181,14 @@ void board_queue::on_init()
             !parse_bool(get_config("enable_queue_amount_exit"), _cfg.enable_queue_amount_exit) ||
             !parse_bool(get_config("enable_queue_lots_exit"), _cfg.enable_queue_lots_exit))
         {
-            printf("board_queue enable flags invalid\n");
+            spdlog::error("board_queue enable flags invalid");
             return;
         }
         // 解析撤单后是否允许重复下单（可选配置，默认 false）
         const std::string allow_reenter_raw = trim_copy(get_config("allow_reenter_after_cancel"));
         if (!allow_reenter_raw.empty() && !parse_bool(allow_reenter_raw, _cfg.allow_reenter_after_cancel))
         {
-            printf("board_queue allow_reenter_after_cancel invalid\n");
+            spdlog::error("board_queue allow_reenter_after_cancel invalid");
             return;
         }
         // 解析最大重复次数（可选配置，默认 0，表示首单后不重复）
@@ -197,7 +198,7 @@ void board_queue::on_init()
             _cfg.max_reenter_times = std::stoi(max_reenter_raw);
             if (_cfg.max_reenter_times < 0)
             {
-                printf("board_queue max_reenter_times must be >= 0\n");
+                spdlog::error("board_queue max_reenter_times must be >= 0");
                 return;
             }
         }
@@ -208,7 +209,7 @@ void board_queue::on_init()
             _cfg.queue_amount_enter = std::stod(trim_copy(get_config("queue_amount_enter")));
             if (_cfg.queue_amount_enter <= 0)
             {
-                printf("board_queue queue_amount_enter must be positive\n");
+                spdlog::error("board_queue queue_amount_enter must be positive");
                 return;
             }
         }
@@ -218,14 +219,14 @@ void board_queue::on_init()
             _cfg.queue_lots_enter = std::stod(trim_copy(get_config("queue_lots_enter")));
             if (_cfg.queue_lots_enter <= 0)
             {
-                printf("board_queue queue_lots_enter must be positive\n");
+                spdlog::error("board_queue queue_lots_enter must be positive");
                 return;
             }
         }
         // 至少启用一个排板条件，避免策略无法触发
         if (!_cfg.enable_queue_amount_enter && !_cfg.enable_queue_lots_enter)
         {
-            printf("board_queue at least one enter condition must be enabled\n");
+            spdlog::error("board_queue at least one enter condition must be enabled");
             return;
         }
 
@@ -235,7 +236,7 @@ void board_queue::on_init()
             _cfg.queue_amount_exit = std::stod(trim_copy(get_config("queue_amount_exit")));
             if (_cfg.queue_amount_exit <= 0)
             {
-                printf("board_queue queue_amount_exit must be positive\n");
+                spdlog::error("board_queue queue_amount_exit must be positive");
                 return;
             }
         }
@@ -245,7 +246,7 @@ void board_queue::on_init()
             _cfg.queue_lots_exit = std::stod(trim_copy(get_config("queue_lots_exit")));
             if (_cfg.queue_lots_exit <= 0)
             {
-                printf("board_queue queue_lots_exit must be positive\n");
+                spdlog::error("board_queue queue_lots_exit must be positive");
                 return;
             }
         }
@@ -255,7 +256,7 @@ void board_queue::on_init()
     } catch (...)
     {
         // 任意转换异常都视为配置错误
-        printf("board_queue config parse failed\n");
+        spdlog::error("board_queue config parse failed");
     }
 }
 
@@ -355,8 +356,9 @@ void board_queue::on_tick(const OrderBookData &tick)
         _latest_board_amount = 0.0;
         _latest_board_lots = 0.0;
     }
-    printf("board_queue latest tick time: %s, board amount: %.2f, board lots: %.2f, active order ref: %lld\n",
-           _latest_tick_time.c_str(), _latest_board_amount, _latest_board_lots, _active_orderref);
+    SPDLOG_DEBUG(
+        "code:{}, board_queue latest tick time: {}, board amount: {:.2f}, board lots: {:.2f}, active order ref: {}",
+        _cfg.contract, _latest_tick_time, _latest_board_amount, _latest_board_lots, _active_orderref);
     // 有活动单时不重复下单
     if (_active_orderref != null_orderref)
     {

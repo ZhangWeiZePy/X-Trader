@@ -263,7 +263,7 @@ void realtime::handle_order(const Order &order)
                     break;
             }
         }
-        print_position(p, "handle_order");
+        // print_position(p, "handle_order");
     }
 
     //???��???

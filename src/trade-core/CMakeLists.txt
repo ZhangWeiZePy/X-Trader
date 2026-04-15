@@ -37,5 +37,7 @@ target_include_directories(trade-core
 )
 
 if (UNIX)
-	target_link_libraries(trade-core dl)
+	target_link_libraries(trade-core dl ${SPDLOG_TARGET})
+else ()
+	target_link_libraries(trade-core ${SPDLOG_TARGET})
 endif ()

@@ -7,4 +7,4 @@ endif()
 
 aux_source_directory(. SRCs)
 add_library(framework STATIC ${SRCs})
-target_link_libraries(framework trade-core ${SYS_LIBs})
+target_link_libraries(framework trade-core ${SYS_LIBs} ${SPDLOG_TARGET})
